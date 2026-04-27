@@ -4,20 +4,17 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Tenant {
   id        String   @id @default(uuid())
-  name      String   // Nome da clínica/hospital (ex: Clínica ABC)
-  subdomain String   @unique // ex: clinica-abc
+  name      String   
+  subdomain String   @unique 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relacionamentos (Tudo no sistema deve pertencer a um Tenant)
-  users         User[]
-  refreshTokens RefreshToken[]
+  users     User[]
 }
 
 enum UserRole {
@@ -29,31 +26,18 @@ enum UserRole {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  tenantId      String
-  email         String    
-  password      String
-  name          String
-  role          UserRole  @default(RECPCIONISTA)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String    @id @default(uuid())
+  tenantId           String
+  email              String    
+  password           String
+  name               String
+  role               UserRole  @default(RECPCIONISTA)
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
   
-  tenant        Tenant         @relation(fields: [tenantId], references: [id])
-  refreshTokens RefreshToken[]
+  tenant             Tenant    @relation(fields: [tenantId], references: [id])
 
-  // Garantir que o email seja único apenas dentro do mesmo tenant
   @@unique([email, tenantId])
-}
-
-model RefreshToken {
-  id        String   @id @default(uuid())
-  tenantId  String
-  token     String   @unique
-  userId    String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
 }
