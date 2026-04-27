@@ -17,6 +17,8 @@ import { DoctorsModule } from './modules/doctors/doctors.module';
 import { NursesModule } from './modules/nurses/nurses.module';
 import { WardsModule } from './modules/wards/wards.module';
 import { BedsModule } from './modules/beds/beds.module';
+import { PatientsModule } from './modules/patients/patients.module';
+import { AppointmentsModule } from './modules/appointments/appointments.module';
 
 @Module({
   imports: [
@@ -61,6 +63,8 @@ import { BedsModule } from './modules/beds/beds.module';
     NursesModule,
     WardsModule,
     BedsModule,
+    PatientsModule,
+    AppointmentsModule,
   ],
   providers: [
     // Define o Throttler Guard Customizado como Global

@@ -349,10 +349,7 @@ Com os módulos de profissionais criados, implemente o cadastro completo de paci
 ## 🧑‍🦽 MÓDULO: PACIENTES (`patients`)
 
 ### Dados completos
-- Nome completo, CPF (criptografado — unique por tenant), CNS (criptografado), data de nascimento, sexo, nome da mãe, nome do pai, endereço completo (Json: logradouro, número, complemento, bairro, cidade, UF, CEP), telefone, contato de emergência (Json: nome, telefone, parentesco), convenioId, número da carteirinha, data de validade da carteirinha, alergias (array), comorbidades (array), histórico clínico, grupo sanguíneo, status
-
-### Regras de negócio
-- CPF único por tenant (validar formato e dígitos verificadores)
+- Nome completor tenant (validar formato e dígitos verificadores)
 - CNS deve ser validado pelo algoritmo oficial do DATASUS
 - Ao cadastrar, criar automaticamente um `MedicalRecord` vinculado ao paciente
 
@@ -396,7 +393,10 @@ Este módulo é obrigatório para o funcionamento em clínicas (o maior volume d
 2. Módulo `appointments` completo com verificação de disponibilidade
 3. Workers BullMQ para notificações de agendamento
 4. DTOs com validação e Swagger
-5. Testes unitários das regras de negócio (validação CPF, conflito de horário)
+5. Testes unitários das regras de negócio (validação CPF, conflito de horário)o, CPF (criptografado — unique por tenant), CNS (criptografado), data de nascimento, sexo, nome da mãe, nome do pai, endereço completo (Json: logradouro, número, complemento, bairro, cidade, UF, CEP), telefone, contato de emergência (Json: nome, telefone, parentesco), convenioId, número da carteirinha, data de validade da carteirinha, alergias (array), comorbidades (array), histórico clínico, grupo sanguíneo, status
+
+### Regras de negócio
+- CPF único p
 
 ---
 
