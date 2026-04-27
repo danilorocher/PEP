@@ -4,10 +4,11 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ==========================================
-// ENUMS GLOBAIS (Formatados por linha)
+// ENUMS GLOBAIS
 // ==========================================
 enum PlanType {
   BASIC
@@ -247,7 +248,6 @@ model Tenant {
   updatedAt        DateTime     @updatedAt
   deletedAt        DateTime?
 
-  // Relações
   users                    User[]
   roles                    Role[]
   auditLogs                AuditLog[]
@@ -267,6 +267,8 @@ model Tenant {
   examRequests             ExamRequest[]
   billingGuides            BillingGuide[]
   medicationAdministrations MedicationAdministration[]
+
+  @@index([deletedAt]) // Indexação base
 }
 
 model Role {
@@ -282,6 +284,7 @@ model Role {
   users       User[]
 
   @@unique([nome, tenantId])
+  @@index([tenantId, deletedAt])
 }
 
 model User {
@@ -318,8 +321,11 @@ model User {
 
   @@unique([email, tenantId])
   @@unique([cpf, tenantId])
-  @@index([tenantId, cpf])
-  @@index([tenantId, email])
+  
+  // Otimização B-Tree para Soft Deletes
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, cpf, deletedAt])
+  @@index([tenantId, email, deletedAt])
 }
 
 model AuditLog {
@@ -374,7 +380,8 @@ model Doctor {
 
   @@unique([crm, ufCrm, tenantId])
   @@unique([cpf, tenantId])
-  @@index([tenantId, crm])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, crm, deletedAt])
 }
 
 model Specialty {
@@ -420,7 +427,8 @@ model Nurse {
 
   @@unique([coren, ufCoren, tenantId])
   @@unique([cpf, tenantId])
-  @@index([tenantId, coren])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, coren, deletedAt])
 }
 
 // ==========================================
@@ -441,6 +449,9 @@ model Ward {
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   beds        Bed[]
   hospitalizations Hospitalization[]
+
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, status, deletedAt])
 }
 
 model Bed {
@@ -459,6 +470,9 @@ model Bed {
   hospitalizations Hospitalization[]
 
   @@unique([numero, wardId, tenantId])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, wardId, deletedAt])
+  @@index([tenantId, status, deletedAt])
 }
 
 model Insurance {
@@ -479,6 +493,8 @@ model Insurance {
   hospitalizations Hospitalization[]
   appointments Appointment[]
   billingGuides BillingGuide[]
+
+  @@index([tenantId, deletedAt])
 }
 
 model Cid10 {
@@ -517,6 +533,8 @@ model Medication {
   tenant                  Tenant   @relation(fields: [tenantId], references: [id])
   prescriptionItems       PrescriptionItem[]
   billingItems            BillingItem[]
+
+  @@index([tenantId, deletedAt])
 }
 
 model Exam {
@@ -536,6 +554,8 @@ model Exam {
   tenant               Tenant   @relation(fields: [tenantId], references: [id])
   requests             ExamRequest[]
   billingItems         BillingItem[]
+
+  @@index([tenantId, deletedAt])
 }
 
 // ==========================================
@@ -576,8 +596,9 @@ model Patient {
   billingGuides           BillingGuide[]
 
   @@unique([cpf, tenantId])
-  @@index([tenantId, cpf])
-  @@index([tenantId, nomeCompleto])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, cpf, deletedAt])
+  @@index([tenantId, nomeCompleto, deletedAt])
 }
 
 model MedicalRecord {
@@ -603,7 +624,8 @@ model MedicalRecord {
   hospitalizations      Hospitalization[]
 
   @@unique([numero, tenantId])
-  @@index([tenantId, patientId])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, patientId, deletedAt])
 }
 
 model ClinicalEvolution {
@@ -631,8 +653,9 @@ model ClinicalEvolution {
   
   history               ClinicalEvolutionHistory[]
 
-  @@index([tenantId, medicalRecordId])
-  @@index([tenantId, profissionalId])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, medicalRecordId, deletedAt])
+  @@index([tenantId, profissionalId, deletedAt])
 }
 
 model ClinicalEvolutionHistory {
@@ -672,7 +695,8 @@ model Prescription {
   
   items                 PrescriptionItem[]
 
-  @@index([tenantId, medicalRecordId])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, medicalRecordId, deletedAt])
 }
 
 model PrescriptionItem {
@@ -695,6 +719,8 @@ model PrescriptionItem {
   prescription        Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
   medication          Medication   @relation(fields: [medicationId], references: [id])
   administrations     MedicationAdministration[]
+
+  @@index([prescriptionId, deletedAt])
 }
 
 model MedicationAdministration {
@@ -716,8 +742,9 @@ model MedicationAdministration {
   hospitalization       Hospitalization? @relation(fields: [hospitalizationId], references: [id])
   administrador         User?            @relation(fields: [administradoPor], references: [id])
 
-  @@index([tenantId, hospitalizationId])
-  @@index([status, dataHoraProgamada])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, hospitalizationId, deletedAt])
+  @@index([status, dataHoraProgamada, deletedAt])
 }
 
 model ExamRequest {
@@ -748,8 +775,9 @@ model ExamRequest {
   exam                      Exam             @relation(fields: [examId], references: [id])
   cid10                     Cid10?           @relation(fields: [cid10Id], references: [id])
 
-  @@index([tenantId, patientId])
-  @@index([tenantId, status])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, patientId, deletedAt])
+  @@index([tenantId, status, deletedAt])
 }
 
 // ==========================================
@@ -798,8 +826,9 @@ model Hospitalization {
   examRequests          ExamRequest[]
   billingGuides         BillingGuide[]
 
-  @@index([tenantId, patientId])
-  @@index([tenantId, status])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, patientId, deletedAt])
+  @@index([tenantId, status, deletedAt])
 }
 
 model Appointment {
@@ -830,8 +859,10 @@ model Appointment {
   
   billingGuides         BillingGuide[]
 
-  @@index([tenantId, doctorId, dataHora])
-  @@index([tenantId, patientId])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, doctorId, dataHora, deletedAt])
+  @@index([tenantId, patientId, deletedAt])
+  @@index([tenantId, status, deletedAt])
 }
 
 // ==========================================
@@ -864,8 +895,9 @@ model BillingGuide {
 
   items               BillingItem[]
 
-  @@index([tenantId, status])
-  @@index([tenantId, convenioId])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, status, deletedAt])
+  @@index([tenantId, convenioId, deletedAt])
 }
 
 model BillingItem {
@@ -887,4 +919,6 @@ model BillingItem {
   billingGuide          BillingGuide @relation(fields: [billingGuideId], references: [id], onDelete: Cascade)
   exam                  Exam?        @relation(fields: [examId], references: [id])
   medication            Medication?  @relation(fields: [medicationId], references: [id])
+
+  @@index([billingGuideId, deletedAt])
 }

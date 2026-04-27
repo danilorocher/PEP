@@ -1,8 +1,8 @@
 import { Injectable, NestMiddleware, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { PrismaService } from '../../prisma/prisma.service';
+// Caminho corrigido para a Clean Architecture
+import { PrismaService } from '../../shared/infrastructure/database/prisma/repositories/prisma.service';
 
-// Estendendo o tipo Request do Express para incluir o tenant
 export interface TenantRequest extends Request {
   tenant?: {
     id: string;
@@ -15,18 +15,23 @@ export class TenantMiddleware implements NestMiddleware {
   constructor(private readonly prisma: PrismaService) {}
 
   async use(req: TenantRequest, res: Response, next: NextFunction) {
-    const host = req.headers.host; // ex: clinica-abc.pep.com:3000
+    const host = req.headers.host; // ex: clinica-abc.pep.com:3000 ou 192.168.1.10:3000
 
     if (!host) {
       throw new BadRequestException('Host header é obrigatório.');
     }
 
+    // Detecção rápida para acessos diretos via IP (IPv4 com ou sem porta)
+    const isIpAddress = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(:[0-9]{1,5})?$/.test(host);
+    
+    if (isIpAddress || host.startsWith('localhost')) {
+      throw new BadRequestException('Acesso direto por IP ou localhost puro não é permitido. Utilize um subdomínio de tenant.');
+    }
+
     // Extrai o subdomínio. Exemplo: clinica-abc.pep.com -> clinica-abc
-    // Em localhost: clinica-abc.localhost:3000 -> clinica-abc
     const subdomain = host.split('.')[0];
 
-    // Evita queries desnecessárias para rotas internas ou sem subdomínio claro
-    if (!subdomain || subdomain === 'localhost' || subdomain === '127') {
+    if (!subdomain) {
       throw new BadRequestException('Subdomínio não identificado.');
     }
 
