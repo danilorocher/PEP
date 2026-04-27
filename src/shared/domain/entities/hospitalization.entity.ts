@@ -1,0 +1,28 @@
+export class Hospitalization {
+  constructor(
+    public readonly id: string,
+    public readonly tenantId: string,
+    public readonly medicalRecordId: string,
+    public readonly patientId: string,
+    public readonly bedId: string,
+    public readonly wardId: string,
+    public readonly medicoResponsavelId: string,
+    public readonly cid10AdmissaoId: string,
+    public readonly cid10AltaId: string | null,
+    public readonly convenioId: string | null,
+    public readonly medicoAltaId: string | null,
+    public readonly dataEntrada: Date,
+    public readonly dataPrevistaAlta: Date | null,
+    public readonly dataAlta: Date | null,
+    public readonly motivoInternacao: string,
+    public readonly tipoInternacao: string,
+    public readonly tipoAcomodacao: string,
+    public readonly numeroGuiaInternacao: string | null,
+    public readonly sumarioAlta: string | null,
+    public readonly condicaoPacienteAlta: string | null,
+    public readonly status: string,
+    public readonly createdAt: Date,
+    public readonly updatedAt: Date,
+    public readonly deletedAt: Date | null,
+  ) {}
+}

@@ -5,8 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import * as Joi from 'joi';
 
-// Corrigido o caminho do PrismaModule
-import { PrismaModule } from './shared/infrastructure/database/prisma/prisma.module';
+import { PrismaModule } from './shared/infrastructure/database/prisma.module';
 import { TenantMiddleware } from './common/middlewares/tenant.middleware';
 import { TenantThrottlerGuard } from './common/guards/tenant-throttler.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
@@ -20,6 +19,12 @@ import { WardsModule } from './modules/wards/wards.module';
 import { BedsModule } from './modules/beds/beds.module';
 import { PatientsModule } from './modules/patients/patients.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
+
+import { MedicalRecordsModule } from './modules/medical-records/medical-records.module';
+import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module';
+import { MedicationsModule } from './modules/medications/medications.module';
+import { ExamsModule } from './modules/exams/exams.module';
+import { HospitalizationsModule } from './modules/hospitalizations/hospitalizations.module';
 
 @Module({
   imports: [
@@ -62,6 +67,12 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
     BedsModule,
     PatientsModule,
     AppointmentsModule,
+    
+    MedicalRecordsModule,
+    PrescriptionsModule,
+    MedicationsModule,
+    ExamsModule,
+    HospitalizationsModule,
   ],
   providers: [
     {
@@ -69,7 +80,6 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
       useClass: TenantThrottlerGuard,
     },
     {
-      // Registra o Interceptor de Auditoria globalmente de forma que aceite Injeção de Dependências
       provide: APP_INTERCEPTOR,
       useClass: AuditInterceptor,
     }
