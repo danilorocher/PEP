@@ -27,6 +27,7 @@ import { ExamsModule } from './modules/exams/exams.module';
 import { HospitalizationsModule } from './modules/hospitalizations/hospitalizations.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { AuditModule } from './modules/audit/audit.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     HospitalizationsModule,
     BillingModule,
     ReportsModule,
+    AuditModule,
   ],
   providers: [
     {

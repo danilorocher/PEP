@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { IPatientRepository } from '../../../../domain/repositories/patient.repository.interface';
 import { Patient, EmergencyContact } from '../../../../domain/entities/patient.entity';
@@ -97,7 +97,7 @@ export class PrismaPatientRepository implements IPatientRepository {
   }
 
   async softDelete(id: string, tenantId: string): Promise<void> {
-    await this.prisma.patient.updateMany({
+    await this.prisma.patient.update({
       where: { id, tenantId },
       data: { deletedAt: new Date(), status: 'INATIVO' }
     });
@@ -121,6 +121,44 @@ export class PrismaPatientRepository implements IPatientRepository {
     return this.prisma.hospitalization.findMany({
       where: { patientId, tenantId, deletedAt: null },
       orderBy: { dataEntrada: 'desc' }
+    });
+  }
+
+  async getCompletePatientData(id: string, tenantId: string): Promise<any> {
+    return this.prisma.patient.findFirst({
+      where: { id, tenantId },
+      include: {
+        medicalRecords: {
+          include: {
+            evolutions: true,
+            prescriptions: { include: { items: true } },
+            examRequests: true
+          }
+        },
+        hospitalizations: true,
+        appointments: true,
+        billingGuides: { include: { items: true } }
+      }
+    });
+  }
+
+  async anonymize(id: string, tenantId: string, data: Partial<Patient>): Promise<void> {
+    await this.prisma.patient.update({
+      where: { id, tenantId },
+      data: {
+        nomeCompleto: data.nomeCompleto,
+        cpf: data.cpf!,
+        cpfHash: null,
+        cns: null,
+        cnsHash: null,
+        telefone: null,
+        enderecoCompleto: Prisma.JsonNull,
+        contatoEmergencia: Prisma.JsonNull,
+        nomeMae: null,
+        nomePai: null,
+        numeroCarteirinha: null,
+        status: 'INATIVO'
+      }
     });
   }
 }

@@ -64,4 +64,19 @@ export class PatientsController {
   remove(@Param('id') id: string, @Req() req: TenantRequest) {
     return this.patientsUseCases.remove(id, req.tenant.id);
   }
+
+  // Novos Endpoints LGPD
+  @Get(':id/data-export')
+  @ApiOperation({ summary: 'Exportação completa de dados do titular (LGPD)' })
+  @RequirePermissions({ module: 'sistema', action: 'administrar' })
+  exportData(@Param('id') id: string, @Req() req: TenantRequest) {
+    return this.patientsUseCases.exportData(id, req.tenant.id);
+  }
+
+  @Post(':id/anonymize')
+  @ApiOperation({ summary: 'Anonimização de dados do paciente (LGPD)' })
+  @RequirePermissions({ module: 'sistema', action: 'administrar' })
+  anonymize(@Param('id') id: string, @Req() req: TenantRequest) {
+    return this.patientsUseCases.anonymize(id, req.tenant.id);
+  }
 }

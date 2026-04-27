@@ -123,4 +123,44 @@ export class PatientsUseCases {
     await this.findOne(id, tenantId);
     return this.patientRepo.getHospitalizations(id, tenantId);
   }
+
+  // Métodos LGPD
+  async exportData(id: string, tenantId: string) {
+    const data = await this.patientRepo.getCompletePatientData(id, tenantId);
+    if (!data) throw new NotFoundException('Paciente não encontrado.');
+
+    // Descriptografar dados sensíveis antes de exportar
+    data.cpf = this.encryption.decrypt(data.cpf);
+    if (data.cns) data.cns = this.encryption.decrypt(data.cns);
+    
+    if (data.medicalRecords) {
+      data.medicalRecords.forEach((record: any) => {
+        if (record.evolutions) {
+          record.evolutions.forEach((evo: any) => {
+            evo.descricao = this.encryption.decrypt(evo.descricao);
+          });
+        }
+      });
+    }
+
+    return data;
+  }
+
+  async anonymize(id: string, tenantId: string) {
+    const patient = await this.patientRepo.findById(id, tenantId);
+    if (!patient) throw new NotFoundException('Paciente não encontrado.');
+
+    const hasActiveHosp = await this.patientRepo.hasActiveHospitalizations(id, tenantId);
+    if (hasActiveHosp) {
+      throw new BadRequestException('Não é possível anonimizar um paciente com internação ativa.');
+    }
+
+    const anonymizedName = `ANONIMIZADO_${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const dummyCpf = this.encryption.encrypt('00000000000');
+
+    await this.patientRepo.anonymize(id, tenantId, {
+      nomeCompleto: anonymizedName,
+      cpf: dummyCpf
+    } as any);
+  }
 }

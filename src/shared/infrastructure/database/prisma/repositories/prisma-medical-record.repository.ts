@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { IMedicalRecordRepository } from '../../../../domain/repositories/medical-record.repository.interface';
 import { MedicalRecord } from '../../../../domain/entities/medical-record.entity';
@@ -8,7 +8,7 @@ import { ClinicalEvolution, ClinicalEvolutionHistory } from '../../../../domain/
 export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private toDomain(record: any): MedicalRecord {
+  private toDomain(record: any): MedicalRecord | null {
     if (!record) return null;
     return new MedicalRecord(
       record.id, record.tenantId, record.patientId, record.numero, record.status,
@@ -17,7 +17,7 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
     );
   }
 
-  private toEvolutionDomain(record: any): ClinicalEvolution {
+  private toEvolutionDomain(record: any): ClinicalEvolution | null {
     if (!record) return null;
     return new ClinicalEvolution(
       record.id, record.tenantId, record.medicalRecordId, record.profissionalId,
@@ -27,7 +27,7 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
     );
   }
 
-  private toHistoryDomain(record: any): ClinicalEvolutionHistory {
+  private toHistoryDomain(record: any): ClinicalEvolutionHistory | null {
     if (!record) return null;
     return new ClinicalEvolutionHistory(
       record.id, record.evolutionId, record.versao, record.dadosSnapshot,
@@ -87,7 +87,7 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
       return evo;
     });
 
-    return this.toEvolutionDomain(created);
+    return this.toEvolutionDomain(created)!;
   }
 
   async updateEvolution(evolution: ClinicalEvolution, history: ClinicalEvolutionHistory): Promise<void> {
@@ -132,7 +132,7 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
         where: { medicalRecordId: recordId, tenantId, deletedAt: null }
       })
     ]);
-    return { data: data.map(r => this.toEvolutionDomain(r)), total };
+    return { data: data.map(r => this.toEvolutionDomain(r)!), total };
   }
 
   async findEvolutionHistory(evolutionId: string): Promise<ClinicalEvolutionHistory[]> {
@@ -140,7 +140,7 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
       where: { evolutionId },
       orderBy: { versao: 'desc' }
     });
-    return records.map(this.toHistoryDomain);
+    return records.map(r => this.toHistoryDomain(r)!);
   }
 
   async logAccess(tenantId: string, userId: string, patientId: string, action: string, ip: string, userAgent: string): Promise<void> {
@@ -155,5 +155,22 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
         userAgent
       }
     });
+  }
+
+  /**
+   * Implementação de Soft Delete Mandatório para Prontuários (LGPD + CFM)
+   */
+  async softDelete(id: string, tenantId: string): Promise<void> {
+    await this.prisma.medicalRecord.update({
+      where: { id, tenantId },
+      data: { deletedAt: new Date() }
+    });
+  }
+
+  /**
+   * Bloqueio de Hard Delete (Segurança de Dados)
+   */
+  async permanentDelete(id: string, tenantId: string): Promise<void> {
+    throw new ForbiddenException('Exclusão permanente de prontuários é proibida por norma legal (CFM/LGPD).');
   }
 }
