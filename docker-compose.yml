@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      target: builder # Usando builder para ambiente de dev local
+    container_name: pep_api
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://pep_admin:pep_password@postgres:5432/pep_plus_db?schema=public
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  postgres:
+    image: postgres:15
+    container_name: pep_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: pep_admin
+      POSTGRES_PASSWORD: pep_password
+      POSTGRES_DB: pep_plus_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pep_admin -d pep_plus_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: pep_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bull-board:
+    image: dgtlmoon/bullmq-board
+    container_name: pep_bull_board
+    ports:
+      - "3001:3000"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USE_TLS: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
