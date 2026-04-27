@@ -8,8 +8,15 @@ import * as Joi from 'joi';
 import { PrismaModule } from './prisma/prisma.module';
 import { TenantMiddleware } from './common/middlewares/tenant.middleware';
 import { TenantThrottlerGuard } from './common/guards/tenant-throttler.guard';
+
+// Importação de todos os Módulos da Aplicação
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { DoctorsModule } from './modules/doctors/doctors.module';
+import { NursesModule } from './modules/nurses/nurses.module';
+import { WardsModule } from './modules/wards/wards.module';
+import { BedsModule } from './modules/beds/beds.module';
 
 @Module({
   imports: [
@@ -43,9 +50,17 @@ import { UsersModule } from './modules/users/users.module';
       inject: [ConfigService],
     }),
 
+    // Módulos Core e de Infraestrutura
     PrismaModule,
+
+    // Módulos de Domínio (Funcionalidades)
     AuthModule,
     UsersModule,
+    RolesModule,
+    DoctorsModule,
+    NursesModule,
+    WardsModule,
+    BedsModule,
   ],
   providers: [
     // Define o Throttler Guard Customizado como Global
