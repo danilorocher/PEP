@@ -5,7 +5,7 @@ import { PermissionsGuard } from '../../shared/guards/permissions.guard';
 import { RequirePermissions } from '../../shared/decorators/permissions.decorator';
 import { HospitalizationsUseCases } from '../../shared/application/use-cases/hospitalizations/hospitalizations.use-cases';
 import { AdmitPatientDto, DischargePatientDto } from './dto/hospitalization.dto';
-import { TenantRequest } from '../../common/middlewares/tenant.middleware';
+import type { TenantRequest } from '../../common/middlewares/tenant.middleware';
 
 @ApiTags('Hospitalizations (Internações)')
 @ApiBearerAuth()
@@ -24,7 +24,7 @@ export class HospitalizationsController {
     @Headers('user-agent') userAgent: string
   ) {
     const userId = (req as any).user.sub;
-    return this.hospitalizationsUseCases.admitPatient(req.tenant!.id, userId, dto, ip, userAgent || 'N/A');
+    return this.hospitalizationsUseCases.admitPatient(req.tenant.id, userId, dto, ip, userAgent || 'N/A');
   }
 
   @Patch(':id/discharge')
@@ -39,7 +39,7 @@ export class HospitalizationsController {
   ) {
     const userId = (req as any).user.sub;
     const userRole = (req as any).user.role;
-    return this.hospitalizationsUseCases.dischargePatient(req.tenant!.id, id, userId, userRole, dto, ip, userAgent || 'N/A');
+    return this.hospitalizationsUseCases.dischargePatient(req.tenant.id, id, userId, userRole, dto, ip, userAgent || 'N/A');
   }
 
   @Get()
@@ -56,6 +56,6 @@ export class HospitalizationsController {
   ) {
     const userId = (req as any).user.sub;
     const filters = { patientId, status };
-    return this.hospitalizationsUseCases.findAll(req.tenant!.id, Number(page) || 1, Number(limit) || 10, filters, userId, ip, userAgent || 'N/A');
+    return this.hospitalizationsUseCases.findAll(req.tenant.id, Number(page) || 1, Number(limit) || 10, filters, userId, ip, userAgent || 'N/A');
   }
 }

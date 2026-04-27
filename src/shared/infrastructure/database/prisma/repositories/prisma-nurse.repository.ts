@@ -7,7 +7,7 @@ import { Nurse } from '../../../../domain/entities/nurse.entity';
 export class PrismaNurseRepository implements INurseRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private toDomain(record: any): Nurse {
+  private toDomain(record: any): Nurse | null {
     if (!record) return null;
     return new Nurse(
       record.id, record.tenantId, record.userId, record.nomeCompleto, record.cpf,
@@ -18,6 +18,11 @@ export class PrismaNurseRepository implements INurseRepository {
 
   async findById(id: string, tenantId: string): Promise<Nurse | null> {
     const record = await this.prisma.nurse.findFirst({ where: { id, tenantId, deletedAt: null } });
+    return this.toDomain(record);
+  }
+
+  async findByUserId(userId: string, tenantId: string): Promise<Nurse | null> {
+    const record = await this.prisma.nurse.findFirst({ where: { userId, tenantId, deletedAt: null } });
     return this.toDomain(record);
   }
 
@@ -36,7 +41,7 @@ export class PrismaNurseRepository implements INurseRepository {
       this.prisma.nurse.findMany({ where: { tenantId, deletedAt: null }, skip, take }),
       this.prisma.nurse.count({ where: { tenantId, deletedAt: null } })
     ]);
-    return { data: data.map(r => this.toDomain(r)), total };
+    return { data: data.map(r => this.toDomain(r)!), total };
   }
 
   async save(nurse: Nurse): Promise<void> {

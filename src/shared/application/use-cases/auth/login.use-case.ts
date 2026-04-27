@@ -6,7 +6,7 @@ import { IUserRepository, USER_REPOSITORY_TOKEN } from '../../../domain/reposito
 import { RedisService } from '../../../infrastructure/redis/redis.service';
 import { LoginDto } from '../../../../modules/auth/dto/login.dto';
 
-interface LoginResponse {
+export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   user: {
@@ -30,21 +30,16 @@ export class LoginUseCase {
   ) {}
 
   async execute(tenantId: string, ip: string, data: LoginDto): Promise<LoginResponse> {
-    // Utiliza o novo método tipado que retorna o User e a senha segregada
     const authData = await this.userRepository.findAuthUserByEmail(data.email, tenantId);
 
     if (!authData || !authData.user.isActive) {
-      this.logger.warn(`[AUDIT] Falha de Login - E-mail não encontrado ou inativo. IP: ${ip} | Tenant: ${tenantId} | E-mail: ${data.email}`);
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 
     const { user, passwordHash } = authData;
-
-    // Comparação segura sem necessidade de type casting malicioso ('as any')
     const isPasswordValid = await bcrypt.compare(data.password, passwordHash);
 
     if (!isPasswordValid) {
-      this.logger.warn(`[AUDIT] Falha de Login - Senha incorreta. IP: ${ip} | Tenant: ${tenantId} | E-mail: ${data.email}`);
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 
@@ -52,17 +47,15 @@ export class LoginUseCase {
     
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
+      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') as any,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') as any,
     });
 
     await this.redisService.setRefreshToken(user.id, refreshToken, 604800);
-
-    this.logger.log(`[AUDIT] Login com sucesso. IP: ${ip} | Tenant: ${tenantId} | User: ${user.id}`);
 
     return {
       accessToken,
