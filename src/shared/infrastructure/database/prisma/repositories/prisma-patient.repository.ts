@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { IPatientRepository } from '../../../../domain/repositories/patient.repository.interface';
-import { Patient } from '../../../../domain/entities/patient.entity';
+import { Patient, EmergencyContact } from '../../../../domain/entities/patient.entity';
+import { Address } from '../../../../domain/entities/user.entity';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -13,14 +14,15 @@ export class PrismaPatientRepository implements IPatientRepository {
     return new Patient(
       record.id, record.tenantId, record.nomeCompleto, record.cpf, record.cns,
       record.dataNascimento, record.sexo, record.nomeMae, record.nomePai,
-      record.enderecoCompleto, record.telefone, record.contatoEmergencia,
+      record.enderecoCompleto ? (record.enderecoCompleto as any as Address) : null, 
+      record.telefone, 
+      record.contatoEmergencia ? (record.contatoEmergencia as any as EmergencyContact) : null,
       record.convenioId, record.numeroCarteirinha, record.dataValidadeCarteirinha,
       record.alergias, record.comorbidades, record.historicoClinico,
       record.grupoSanguineo, record.status, record.createdAt, record.updatedAt, record.deletedAt
     );
   }
 
-  // Cria o Paciente e o Prontuário Eletrônico em uma única Transação
   async createWithMedicalRecord(patient: Patient, medicalRecordNumero: string): Promise<Patient> {
     const created = await this.prisma.$transaction(async (tx) => {
       const p = await tx.patient.create({
@@ -28,8 +30,8 @@ export class PrismaPatientRepository implements IPatientRepository {
           id: patient.id, tenantId: patient.tenantId, nomeCompleto: patient.nomeCompleto,
           cpf: patient.cpf, cns: patient.cns, dataNascimento: patient.dataNascimento,
           sexo: patient.sexo as any, nomeMae: patient.nomeMae, nomePai: patient.nomePai,
-          enderecoCompleto: patient.enderecoCompleto, telefone: patient.telefone,
-          contatoEmergencia: patient.contatoEmergencia, convenioId: patient.convenioId,
+          enderecoCompleto: patient.enderecoCompleto as any, telefone: patient.telefone,
+          contatoEmergencia: patient.contatoEmergencia as any, convenioId: patient.convenioId,
           numeroCarteirinha: patient.numeroCarteirinha, dataValidadeCarteirinha: patient.dataValidadeCarteirinha,
           alergias: patient.alergias, comorbidades: patient.comorbidades, historicoClinico: patient.historicoClinico,
           grupoSanguineo: patient.grupoSanguineo as any, status: patient.status as any
@@ -37,12 +39,7 @@ export class PrismaPatientRepository implements IPatientRepository {
       });
 
       await tx.medicalRecord.create({
-        data: {
-          tenantId: p.tenantId,
-          patientId: p.id,
-          numero: medicalRecordNumero,
-          status: 'ABERTO'
-        }
+        data: { tenantId: p.tenantId, patientId: p.id, numero: medicalRecordNumero, status: 'ABERTO' }
       });
 
       return p;
@@ -52,16 +49,12 @@ export class PrismaPatientRepository implements IPatientRepository {
   }
 
   async findById(id: string, tenantId: string): Promise<Patient | null> {
-    const record = await this.prisma.patient.findFirst({
-      where: { id, tenantId, deletedAt: null }
-    });
+    const record = await this.prisma.patient.findFirst({ where: { id, tenantId, deletedAt: null } });
     return this.toDomain(record);
   }
 
   async findByCpf(cpf: string, tenantId: string): Promise<Patient | null> {
-    const record = await this.prisma.patient.findFirst({
-      where: { cpf, tenantId, deletedAt: null }
-    });
+    const record = await this.prisma.patient.findFirst({ where: { cpf, tenantId, deletedAt: null } });
     return this.toDomain(record);
   }
 
@@ -91,8 +84,10 @@ export class PrismaPatientRepository implements IPatientRepository {
       data: {
         nomeCompleto: patient.nomeCompleto, cpf: patient.cpf, cns: patient.cns,
         dataNascimento: patient.dataNascimento, sexo: patient.sexo as any,
-        nomeMae: patient.nomeMae, nomePai: patient.nomePai, enderecoCompleto: patient.enderecoCompleto,
-        telefone: patient.telefone, contatoEmergencia: patient.contatoEmergencia,
+        nomeMae: patient.nomeMae, nomePai: patient.nomePai, 
+        enderecoCompleto: patient.enderecoCompleto as any,
+        telefone: patient.telefone, 
+        contatoEmergencia: patient.contatoEmergencia as any,
         convenioId: patient.convenioId, numeroCarteirinha: patient.numeroCarteirinha,
         dataValidadeCarteirinha: patient.dataValidadeCarteirinha, alergias: patient.alergias,
         comorbidades: patient.comorbidades, historicoClinico: patient.historicoClinico,

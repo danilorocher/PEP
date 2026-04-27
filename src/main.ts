@@ -1,10 +1,17 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Tipamos a aplicação como NestExpressApplication para acessar as configurações de baixo nível do Express
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // --- SEGURANÇA: Configuração de Trust Proxy ---
+  // Fundamental para o Rate Limiting funcionar corretamente atrás de Load Balancers (AWS, Cloudflare, Nginx).
+  // Garante que o `req.ip` leia o IP real do cliente via header X-Forwarded-For, evitando bloqueio de usuários legítimos.
+  app.set('trust proxy', 1);
 
   // Validação Global
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

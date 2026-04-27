@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
-import { IUserRepository } from '../../../../domain/repositories/user.repository.interface';
-import { User } from '../../../../domain/entities/user.entity';
+import { IUserRepository, UserWithPassword } from '../../../../domain/repositories/user.repository.interface';
+import { User, Address } from '../../../../domain/entities/user.entity';
 
 @Injectable()
 export class PrismaUserRepository implements IUserRepository {
@@ -12,26 +12,31 @@ export class PrismaUserRepository implements IUserRepository {
     return new User(
       record.id, record.tenantId, record.roleId, record.nomeCompleto, record.cpf, record.email,
       record.isActive, record.mustChangePassword, record.dataNascimento, record.sexo,
-      record.telefone, record.enderecoCompleto, record.dataAdmissao,
-      record.createdAt, record.updatedAt, record.deletedAt
+      record.telefone, record.enderecoCompleto ? (record.enderecoCompleto as any as Address) : null, 
+      record.dataAdmissao, record.createdAt, record.updatedAt, record.deletedAt
     );
   }
 
   async findById(id: string, tenantId: string): Promise<User | null> {
     const record = await this.prisma.user.findFirst({ where: { id, tenantId, deletedAt: null } });
-    // Retorna o record puro com a senha APENAS se for usado no UseCase interno (Login). O Domínio omite.
-    if (!record) return null;
-    const domainUser = this.toDomain(record);
-    (domainUser as any).password = record.password; 
-    return domainUser;
+    return this.toDomain(record);
   }
 
   async findByEmail(email: string, tenantId: string): Promise<User | null> {
     const record = await this.prisma.user.findFirst({ where: { email, tenantId, deletedAt: null } });
+    return this.toDomain(record);
+  }
+
+  async findAuthUserByEmail(email: string, tenantId: string): Promise<UserWithPassword | null> {
+    const record = await this.prisma.user.findFirst({ where: { email, tenantId, deletedAt: null } });
     if (!record) return null;
-    const domainUser = this.toDomain(record);
-    (domainUser as any).password = record.password;
-    return domainUser;
+    return { user: this.toDomain(record), passwordHash: record.password };
+  }
+
+  async findAuthUserById(id: string, tenantId: string): Promise<UserWithPassword | null> {
+    const record = await this.prisma.user.findFirst({ where: { id, tenantId, deletedAt: null } });
+    if (!record) return null;
+    return { user: this.toDomain(record), passwordHash: record.password };
   }
 
   async findByCpf(cpf: string, tenantId: string): Promise<User | null> {
@@ -53,7 +58,8 @@ export class PrismaUserRepository implements IUserRepository {
         id: user.id, tenantId: user.tenantId, roleId: user.roleId, nomeCompleto: user.nomeCompleto,
         cpf: user.cpf, email: user.email, password: passwordHash || '', isActive: user.isActive,
         mustChangePassword: user.mustChangePassword, dataNascimento: user.dataNascimento,
-        sexo: user.sexo as any, telefone: user.telefone, enderecoCompleto: user.enderecoCompleto,
+        sexo: user.sexo as any, telefone: user.telefone, 
+        enderecoCompleto: user.enderecoCompleto as any, // Salva como Json no Prisma
         dataAdmissao: user.dataAdmissao
       },
     });
@@ -63,7 +69,8 @@ export class PrismaUserRepository implements IUserRepository {
     const dataToUpdate: any = {
       roleId: user.roleId, nomeCompleto: user.nomeCompleto, cpf: user.cpf, email: user.email,
       isActive: user.isActive, mustChangePassword: user.mustChangePassword, dataNascimento: user.dataNascimento,
-      sexo: user.sexo as any, telefone: user.telefone, enderecoCompleto: user.enderecoCompleto,
+      sexo: user.sexo as any, telefone: user.telefone, 
+      enderecoCompleto: user.enderecoCompleto as any, // Salva como Json no Prisma
       dataAdmissao: user.dataAdmissao
     };
     if (passwordHash) dataToUpdate.password = passwordHash;

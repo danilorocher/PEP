@@ -30,16 +30,18 @@ export class LoginUseCase {
   ) {}
 
   async execute(tenantId: string, ip: string, data: LoginDto): Promise<LoginResponse> {
-    const user = await this.userRepository.findByEmail(data.email, tenantId);
+    // Utiliza o novo método tipado que retorna o User e a senha segregada
+    const authData = await this.userRepository.findAuthUserByEmail(data.email, tenantId);
 
-    const userRecord = user as any; 
-
-    if (!user || !user.isActive) {
+    if (!authData || !authData.user.isActive) {
       this.logger.warn(`[AUDIT] Falha de Login - E-mail não encontrado ou inativo. IP: ${ip} | Tenant: ${tenantId} | E-mail: ${data.email}`);
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 
-    const isPasswordValid = await bcrypt.compare(data.password, userRecord.password);
+    const { user, passwordHash } = authData;
+
+    // Comparação segura sem necessidade de type casting malicioso ('as any')
+    const isPasswordValid = await bcrypt.compare(data.password, passwordHash);
 
     if (!isPasswordValid) {
       this.logger.warn(`[AUDIT] Falha de Login - Senha incorreta. IP: ${ip} | Tenant: ${tenantId} | E-mail: ${data.email}`);
@@ -47,6 +49,7 @@ export class LoginUseCase {
     }
 
     const payload = { sub: user.id, email: user.email, role: user.roleId, tenantId };
+    
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
@@ -68,7 +71,7 @@ export class LoginUseCase {
         id: user.id,
         name: user.nomeCompleto,
         role: user.roleId,
-        mustChangePassword: userRecord.mustChangePassword,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }

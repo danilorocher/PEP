@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { IRoleRepository } from '../../../../domain/repositories/role.repository.interface';
-import { Role } from '../../../../domain/entities/role.entity';
+import { Role, RolePermissions } from '../../../../domain/entities/role.entity';
 
 @Injectable()
 export class PrismaRoleRepository implements IRoleRepository {
@@ -10,7 +10,8 @@ export class PrismaRoleRepository implements IRoleRepository {
   private toDomain(record: any): Role {
     if (!record) return null;
     return new Role(
-      record.id, record.tenantId, record.nome, record.permissoes,
+      record.id, record.tenantId, record.nome, 
+      record.permissoes as any as RolePermissions, 
       record.createdAt, record.updatedAt, record.deletedAt
     );
   }
@@ -21,7 +22,7 @@ export class PrismaRoleRepository implements IRoleRepository {
         id: role.id,
         tenantId: role.tenantId,
         nome: role.nome,
-        permissoes: role.permissoes,
+        permissoes: role.permissoes as any, // Salva como Json no Prisma
       },
     });
     return this.toDomain(created);
@@ -46,7 +47,7 @@ export class PrismaRoleRepository implements IRoleRepository {
       where: { id: role.id },
       data: {
         nome: role.nome,
-        permissoes: role.permissoes,
+        permissoes: role.permissoes as any, // Salva como Json no Prisma
       },
     });
     return this.toDomain(updated);

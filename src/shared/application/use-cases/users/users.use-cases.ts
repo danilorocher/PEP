@@ -18,13 +18,12 @@ export class UsersUseCases {
     const exists = await this.userRepo.findByCpf(encryptedCpf, tenantId);
     if (exists) throw new BadRequestException('CPF já cadastrado nesta clínica.');
 
-    // Senha padrão gerada e exigência de troca
     const defaultPassword = crypto.randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
 
     const newUser = new User(
       crypto.randomUUID(), tenantId, data.roleId, data.nomeCompleto, encryptedCpf, data.email,
-      true, true, // mustChangePassword = true
+      true, true,
       data.dataNascimento ? new Date(data.dataNascimento) : null,
       data.sexo || null, data.telefone || null, data.enderecoCompleto || null,
       data.dataAdmissao ? new Date(data.dataAdmissao) : null,
@@ -32,14 +31,12 @@ export class UsersUseCases {
     );
 
     await this.userRepo.save(newUser, hashedPassword);
-    // Aqui um evento BullMQ enviaria o email com a senha padrão `defaultPassword`
     return newUser;
   }
 
   async findAll(tenantId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
     const { data, total } = await this.userRepo.findAll(tenantId, skip, limit);
-    // Descriptografa o CPF para enviar ao front-end de forma legível
     const decryptedData = data.map(user => ({
       ...user, cpf: this.encryption.decrypt(user.cpf)
     }));
@@ -74,15 +71,20 @@ export class UsersUseCases {
   }
 
   async changePassword(userId: string, tenantId: string, data: ChangePasswordDto): Promise<void> {
-    const user = await this.userRepo.findById(userId, tenantId);
-    const isPasswordValid = await bcrypt.compare(data.currentPassword, (user as any).password);
+    // Utiliza o novo método tipado focado na autenticação/validação
+    const authData = await this.userRepo.findAuthUserById(userId, tenantId);
+    if (!authData) throw new NotFoundException('Usuário não encontrado.');
+    
+    const { user, passwordHash } = authData;
+
+    const isPasswordValid = await bcrypt.compare(data.currentPassword, passwordHash);
     
     if (!isPasswordValid) throw new BadRequestException('Senha atual incorreta.');
 
     const newHashedPassword = await bcrypt.hash(data.newPassword, 12);
     const updatedUser = new User(
        user.id, user.tenantId, user.roleId, user.nomeCompleto, user.cpf, user.email,
-       user.isActive, false, // mustChangePassword = false
+       user.isActive, false, // mustChangePassword vira false
        user.dataNascimento, user.sexo, user.telefone, user.enderecoCompleto, user.dataAdmissao,
        user.createdAt, new Date(), user.deletedAt
     );

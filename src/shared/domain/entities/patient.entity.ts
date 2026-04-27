@@ -1,3 +1,11 @@
+import { Address } from './user.entity';
+
+export interface EmergencyContact {
+  nome: string;
+  telefone: string;
+  parentesco: string;
+}
+
 export class Patient {
   constructor(
     public readonly id: string,
@@ -9,9 +17,9 @@ export class Patient {
     public readonly sexo: string,
     public readonly nomeMae: string | null,
     public readonly nomePai: string | null,
-    public readonly enderecoCompleto: any | null,
+    public readonly enderecoCompleto: Address | null,
     public readonly telefone: string | null,
-    public readonly contatoEmergencia: any | null,
+    public readonly contatoEmergencia: EmergencyContact | null,
     public readonly convenioId: string | null,
     public readonly numeroCarteirinha: string | null,
     public readonly dataValidadeCarteirinha: Date | null,

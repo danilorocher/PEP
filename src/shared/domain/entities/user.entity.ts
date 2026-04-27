@@ -1,3 +1,13 @@
+export interface Address {
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cep: string;
+}
+
 export class User {
   constructor(
     public readonly id: string,
@@ -11,7 +21,7 @@ export class User {
     public readonly dataNascimento: Date | null,
     public readonly sexo: string | null,
     public readonly telefone: string | null,
-    public readonly enderecoCompleto: any | null,
+    public readonly enderecoCompleto: Address | null,
     public readonly dataAdmissao: Date | null,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
