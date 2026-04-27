@@ -25,6 +25,8 @@ import { PrescriptionsModule } from './modules/prescriptions/prescriptions.modul
 import { MedicationsModule } from './modules/medications/medications.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { HospitalizationsModule } from './modules/hospitalizations/hospitalizations.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -73,6 +75,8 @@ import { HospitalizationsModule } from './modules/hospitalizations/hospitalizati
     MedicationsModule,
     ExamsModule,
     HospitalizationsModule,
+    BillingModule,
+    ReportsModule,
   ],
   providers: [
     {

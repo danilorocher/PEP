@@ -7,7 +7,7 @@ import { User, Address } from '../../../../domain/entities/user.entity';
 export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private toDomain(record: any): User {
+  private toDomain(record: any): User | null {
     if (!record) return null;
     return new User(
       record.id, record.tenantId, record.roleId, record.nomeCompleto, record.cpf, record.email,
@@ -30,17 +30,17 @@ export class PrismaUserRepository implements IUserRepository {
   async findAuthUserByEmail(email: string, tenantId: string): Promise<UserWithPassword | null> {
     const record = await this.prisma.user.findFirst({ where: { email, tenantId, deletedAt: null } });
     if (!record) return null;
-    return { user: this.toDomain(record), passwordHash: record.password };
+    return { user: this.toDomain(record)!, passwordHash: record.password };
   }
 
   async findAuthUserById(id: string, tenantId: string): Promise<UserWithPassword | null> {
     const record = await this.prisma.user.findFirst({ where: { id, tenantId, deletedAt: null } });
     if (!record) return null;
-    return { user: this.toDomain(record), passwordHash: record.password };
+    return { user: this.toDomain(record)!, passwordHash: record.password };
   }
 
-  async findByCpf(cpf: string, tenantId: string): Promise<User | null> {
-    const record = await this.prisma.user.findFirst({ where: { cpf, tenantId, deletedAt: null } });
+  async findByCpf(cpfHash: string, tenantId: string): Promise<User | null> {
+    const record = await this.prisma.user.findFirst({ where: { cpfHash, tenantId, deletedAt: null } });
     return this.toDomain(record);
   }
 
@@ -49,31 +49,32 @@ export class PrismaUserRepository implements IUserRepository {
       this.prisma.user.findMany({ where: { tenantId, deletedAt: null }, skip, take }),
       this.prisma.user.count({ where: { tenantId, deletedAt: null } })
     ]);
-    return { data: data.map(r => this.toDomain(r)), total };
+    return { data: data.map(r => this.toDomain(r)!), total };
   }
 
-  async save(user: User, passwordHash?: string): Promise<void> {
+  async save(user: User, passwordHash: string, cpfHash?: string): Promise<void> {
     await this.prisma.user.create({
       data: {
         id: user.id, tenantId: user.tenantId, roleId: user.roleId, nomeCompleto: user.nomeCompleto,
-        cpf: user.cpf, email: user.email, password: passwordHash || '', isActive: user.isActive,
+        cpf: user.cpf, cpfHash: cpfHash, email: user.email, password: passwordHash || '', isActive: user.isActive,
         mustChangePassword: user.mustChangePassword, dataNascimento: user.dataNascimento,
         sexo: user.sexo as any, telefone: user.telefone, 
-        enderecoCompleto: user.enderecoCompleto as any, // Salva como Json no Prisma
+        enderecoCompleto: user.enderecoCompleto as any,
         dataAdmissao: user.dataAdmissao
       },
     });
   }
 
-  async update(user: User, passwordHash?: string): Promise<void> {
+  async update(user: User, passwordHash?: string, cpfHash?: string): Promise<void> {
     const dataToUpdate: any = {
       roleId: user.roleId, nomeCompleto: user.nomeCompleto, cpf: user.cpf, email: user.email,
       isActive: user.isActive, mustChangePassword: user.mustChangePassword, dataNascimento: user.dataNascimento,
       sexo: user.sexo as any, telefone: user.telefone, 
-      enderecoCompleto: user.enderecoCompleto as any, // Salva como Json no Prisma
+      enderecoCompleto: user.enderecoCompleto as any,
       dataAdmissao: user.dataAdmissao
     };
     if (passwordHash) dataToUpdate.password = passwordHash;
+    if (cpfHash) dataToUpdate.cpfHash = cpfHash;
 
     await this.prisma.user.update({
       where: { id: user.id },

@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenEx
 import { IMedicalRecordRepository, MEDICAL_RECORD_REPOSITORY_TOKEN } from '../../../domain/repositories/medical-record.repository.interface';
 import { MedicalRecord } from '../../../domain/entities/medical-record.entity';
 import { ClinicalEvolution, ClinicalEvolutionHistory } from '../../../domain/entities/clinical-evolution.entity';
+import { EncryptionService } from '../../../infrastructure/database/prisma/repositories/services/encryption.service';
 import * as crypto from 'crypto';
 import { CreateClinicalEvolutionDto, UpdateClinicalEvolutionDto } from '../../../../modules/medical-records/dto/clinical-evolution.dto';
 
@@ -9,6 +10,7 @@ import { CreateClinicalEvolutionDto, UpdateClinicalEvolutionDto } from '../../..
 export class MedicalRecordsUseCases {
   constructor(
     @Inject(MEDICAL_RECORD_REPOSITORY_TOKEN) private readonly recordRepo: IMedicalRecordRepository,
+    private readonly encryption: EncryptionService,
   ) {}
 
   async getById(id: string, tenantId: string, userId: string, ip: string, userAgent: string): Promise<MedicalRecord> {
@@ -31,8 +33,10 @@ export class MedicalRecordsUseCases {
       throw new BadRequestException('O CID-10 é obrigatório para evoluções médicas.');
     }
 
+    const encryptedDesc = this.encryption.encrypt(data.descricao);
+
     const newEvolution = new ClinicalEvolution(
-      crypto.randomUUID(), tenantId, recordId, userId, userRole, data.descricao,
+      crypto.randomUUID(), tenantId, recordId, userId, userRole, encryptedDesc,
       1, data.assinadoDigitalmente || false, data.hospitalizationId || null, data.cid10Id || null,
       data.assinaturaHash || null, new Date(), new Date(), new Date(), null
     );
@@ -41,7 +45,7 @@ export class MedicalRecordsUseCases {
 
     await this.recordRepo.logAccess(tenantId, userId, record.patientId, 'CRIAR_EVOLUCAO', ip, userAgent);
 
-    return created;
+    return { ...created, descricao: this.encryption.decrypt(created.descricao) };
   }
 
   async updateEvolution(tenantId: string, evolutionId: string, userId: string, userRole: string, data: UpdateClinicalEvolutionDto, ip: string, userAgent: string): Promise<void> {
@@ -62,10 +66,11 @@ export class MedicalRecordsUseCases {
     }
 
     const nextVersion = evolution.versao + 1;
+    const encryptedDesc = this.encryption.encrypt(data.descricao);
 
     const updatedEvolution = new ClinicalEvolution(
       evolution.id, evolution.tenantId, evolution.medicalRecordId, evolution.profissionalId,
-      evolution.tipoProfissional, data.descricao, nextVersion, evolution.assinadoDigitalmente,
+      evolution.tipoProfissional, encryptedDesc, nextVersion, evolution.assinadoDigitalmente,
       evolution.hospitalizationId, data.cid10Id || evolution.cid10Id, evolution.assinaturaHash,
       evolution.dataHora, evolution.createdAt, new Date(), evolution.deletedAt
     );
@@ -87,7 +92,12 @@ export class MedicalRecordsUseCases {
 
     await this.recordRepo.logAccess(tenantId, userId, record.patientId, 'LISTAR_EVOLUCOES', ip, userAgent);
 
-    return { data: result.data, total: result.total, page, limit };
+    const decryptedData = result.data.map(evo => ({
+        ...evo,
+        descricao: this.encryption.decrypt(evo.descricao)
+    }));
+
+    return { data: decryptedData, total: result.total, page, limit };
   }
 
   async getEvolutionHistory(tenantId: string, evolutionId: string, userId: string, ip: string, userAgent: string) {
@@ -95,11 +105,16 @@ export class MedicalRecordsUseCases {
     if (!evolution) throw new NotFoundException('Evolução não encontrada.');
 
     const record = await this.recordRepo.findById(evolution.medicalRecordId, tenantId);
-
     const history = await this.recordRepo.findEvolutionHistory(evolutionId);
 
     await this.recordRepo.logAccess(tenantId, userId, record!.patientId, 'VISUALIZAR_HISTORICO_EVOLUCAO', ip, userAgent);
 
-    return history;
+    return history.map(h => ({
+        ...h,
+        dadosSnapshot: {
+            ...h.dadosSnapshot,
+            descricao: this.encryption.decrypt(h.dadosSnapshot.descricao)
+        }
+    }));
   }
 }

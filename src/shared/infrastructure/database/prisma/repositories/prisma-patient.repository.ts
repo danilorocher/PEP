@@ -9,7 +9,7 @@ import { Prisma } from '@prisma/client';
 export class PrismaPatientRepository implements IPatientRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private toDomain(record: any): Patient {
+  private toDomain(record: any): Patient | null {
     if (!record) return null;
     return new Patient(
       record.id, record.tenantId, record.nomeCompleto, record.cpf, record.cns,
@@ -23,12 +23,12 @@ export class PrismaPatientRepository implements IPatientRepository {
     );
   }
 
-  async createWithMedicalRecord(patient: Patient, medicalRecordNumero: string): Promise<Patient> {
+  async createWithMedicalRecord(patient: Patient, medicalRecordNumero: string, cpfHash: string, cnsHash?: string | null): Promise<Patient> {
     const created = await this.prisma.$transaction(async (tx) => {
       const p = await tx.patient.create({
         data: {
           id: patient.id, tenantId: patient.tenantId, nomeCompleto: patient.nomeCompleto,
-          cpf: patient.cpf, cns: patient.cns, dataNascimento: patient.dataNascimento,
+          cpf: patient.cpf, cpfHash, cns: patient.cns, cnsHash, dataNascimento: patient.dataNascimento,
           sexo: patient.sexo as any, nomeMae: patient.nomeMae, nomePai: patient.nomePai,
           enderecoCompleto: patient.enderecoCompleto as any, telefone: patient.telefone,
           contatoEmergencia: patient.contatoEmergencia as any, convenioId: patient.convenioId,
@@ -45,7 +45,7 @@ export class PrismaPatientRepository implements IPatientRepository {
       return p;
     });
 
-    return this.toDomain(created);
+    return this.toDomain(created)!;
   }
 
   async findById(id: string, tenantId: string): Promise<Patient | null> {
@@ -53,8 +53,8 @@ export class PrismaPatientRepository implements IPatientRepository {
     return this.toDomain(record);
   }
 
-  async findByCpf(cpf: string, tenantId: string): Promise<Patient | null> {
-    const record = await this.prisma.patient.findFirst({ where: { cpf, tenantId, deletedAt: null } });
+  async findByCpf(cpfHash: string, tenantId: string): Promise<Patient | null> {
+    const record = await this.prisma.patient.findFirst({ where: { cpfHash, tenantId, deletedAt: null } });
     return this.toDomain(record);
   }
 
@@ -75,14 +75,14 @@ export class PrismaPatientRepository implements IPatientRepository {
       this.prisma.patient.findMany({ where, skip, take, orderBy: { nomeCompleto: 'asc' } }),
       this.prisma.patient.count({ where })
     ]);
-    return { data: data.map(r => this.toDomain(r)), total };
+    return { data: data.map(r => this.toDomain(r)!), total };
   }
 
-  async update(patient: Patient): Promise<void> {
+  async update(patient: Patient, cpfHash?: string, cnsHash?: string | null): Promise<void> {
     await this.prisma.patient.update({
       where: { id: patient.id },
       data: {
-        nomeCompleto: patient.nomeCompleto, cpf: patient.cpf, cns: patient.cns,
+        nomeCompleto: patient.nomeCompleto, cpf: patient.cpf, cpfHash, cns: patient.cns, cnsHash,
         dataNascimento: patient.dataNascimento, sexo: patient.sexo as any,
         nomeMae: patient.nomeMae, nomePai: patient.nomePai, 
         enderecoCompleto: patient.enderecoCompleto as any,

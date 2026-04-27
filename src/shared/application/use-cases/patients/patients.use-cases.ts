@@ -17,12 +17,15 @@ export class PatientsUseCases {
     if (!isValidCPF(data.cpf)) throw new BadRequestException('CPF inválido.');
     if (data.cns && !isValidCNS(data.cns)) throw new BadRequestException('CNS do DATASUS inválido.');
 
+    const cpfHash = this.encryption.hash(data.cpf);
     const encryptedCpf = this.encryption.encrypt(data.cpf);
-    if (await this.patientRepo.findByCpf(encryptedCpf, tenantId)) {
+    
+    if (await this.patientRepo.findByCpf(cpfHash, tenantId)) {
       throw new BadRequestException('Já existe um paciente cadastrado com este CPF nesta clínica.');
     }
 
     const encryptedCns = data.cns ? this.encryption.encrypt(data.cns) : null;
+    const cnsHash = data.cns ? this.encryption.hash(data.cns) : null;
     const medicalRecordNumero = `PEP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const newPatient = new Patient(
@@ -35,7 +38,7 @@ export class PatientsUseCases {
       data.grupoSanguineo || null, data.status || 'ATIVO', new Date(), new Date(), null
     );
 
-    return this.patientRepo.createWithMedicalRecord(newPatient, medicalRecordNumero);
+    return this.patientRepo.createWithMedicalRecord(newPatient, medicalRecordNumero, cpfHash, cnsHash);
   }
 
   async findAll(tenantId: string, page: number = 1, limit: number = 10, filter?: any) {
@@ -65,15 +68,19 @@ export class PatientsUseCases {
     if (!patient) throw new NotFoundException('Paciente não encontrado.');
 
     let encryptedCpf = patient.cpf;
+    let cpfHash = undefined;
     if (data.cpf) {
       if (!isValidCPF(data.cpf)) throw new BadRequestException('CPF inválido.');
       encryptedCpf = this.encryption.encrypt(data.cpf);
+      cpfHash = this.encryption.hash(data.cpf);
     }
 
     let encryptedCns = patient.cns;
+    let cnsHash = undefined;
     if (data.cns !== undefined) {
       if (data.cns && !isValidCNS(data.cns)) throw new BadRequestException('CNS inválido.');
       encryptedCns = data.cns ? this.encryption.encrypt(data.cns) : null;
+      cnsHash = data.cns ? this.encryption.hash(data.cns) : null;
     }
 
     const updatedPatient = new Patient(
@@ -93,7 +100,7 @@ export class PatientsUseCases {
       data.status || patient.status, patient.createdAt, new Date(), patient.deletedAt
     );
 
-    await this.patientRepo.update(updatedPatient);
+    await this.patientRepo.update(updatedPatient, cpfHash, cnsHash);
   }
 
   async remove(id: string, tenantId: string): Promise<void> {

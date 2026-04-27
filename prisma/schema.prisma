@@ -163,7 +163,7 @@ enum ExamReqStatus {
   COLETADO
   EM_ANALISE
   CONCLUIDO
-  CANCELADO
+  CANCELADA
 }
 
 enum HospType {
@@ -268,7 +268,7 @@ model Tenant {
   billingGuides            BillingGuide[]
   medicationAdministrations MedicationAdministration[]
 
-  @@index([deletedAt]) // Indexação base
+  @@index([deletedAt])
 }
 
 model Role {
@@ -293,6 +293,7 @@ model User {
   roleId             String
   nomeCompleto       String
   cpf                String       // Criptografado
+  cpfHash            String?      // Hash para busca (LGPD)
   dataNascimento     DateTime?
   sexo               Gender?
   email              String    
@@ -320,11 +321,10 @@ model User {
   administrations    MedicationAdministration[]
 
   @@unique([email, tenantId])
-  @@unique([cpf, tenantId])
+  @@unique([cpfHash, tenantId])
   
-  // Otimização B-Tree para Soft Deletes
   @@index([tenantId, deletedAt])
-  @@index([tenantId, cpf, deletedAt])
+  @@index([tenantId, cpfHash, deletedAt])
   @@index([tenantId, email, deletedAt])
 }
 
@@ -357,10 +357,12 @@ model Doctor {
   userId                  String?  @unique
   nomeCompleto            String
   cpf                     String   // Criptografado
+  cpfHash                 String?  // Hash para busca (LGPD)
   crm                     String
   ufCrm                   String
   dataExpedicaoCrm        DateTime?
   cns                     String?  // Criptografado
+  cnsHash                 String?  // Hash para busca (LGPD)
   telefoneProfissional    String?
   emailProfissional       String?
   registroSecundario      String?
@@ -379,7 +381,7 @@ model Doctor {
   appointments            Appointment[]
 
   @@unique([crm, ufCrm, tenantId])
-  @@unique([cpf, tenantId])
+  @@unique([cpfHash, tenantId])
   @@index([tenantId, deletedAt])
   @@index([tenantId, crm, deletedAt])
 }
@@ -411,11 +413,13 @@ model Nurse {
   userId             String?  @unique
   nomeCompleto       String
   cpf                String   // Criptografado
+  cpfHash            String?  // Hash para busca (LGPD)
   coren              String
   ufCoren            String
   dataExpedicaoCoren DateTime?
   categoria          NurseCategory
   cns                String?  // Criptografado
+  cnsHash                String?  // Hash para busca (LGPD)
   podePrescrever     Boolean  @default(false)
   status             EntityStatus @default(ATIVO)
   createdAt          DateTime @default(now())
@@ -426,7 +430,7 @@ model Nurse {
   user               User?    @relation(fields: [userId], references: [id])
 
   @@unique([coren, ufCoren, tenantId])
-  @@unique([cpf, tenantId])
+  @@unique([cpfHash, tenantId])
   @@index([tenantId, deletedAt])
   @@index([tenantId, coren, deletedAt])
 }
@@ -567,7 +571,9 @@ model Patient {
   convenioId              String?
   nomeCompleto            String
   cpf                     String   // Criptografado
+  cpfHash                 String?  // Hash para busca (LGPD)
   cns                     String?  // Criptografado
+  cnsHash                 String?  // Hash para busca (LGPD)
   dataNascimento          DateTime
   sexo                    Gender
   nomeMae                 String?
@@ -595,9 +601,9 @@ model Patient {
   examRequests            ExamRequest[]
   billingGuides           BillingGuide[]
 
-  @@unique([cpf, tenantId])
+  @@unique([cpfHash, tenantId])
   @@index([tenantId, deletedAt])
-  @@index([tenantId, cpf, deletedAt])
+  @@index([tenantId, cpfHash, deletedAt])
   @@index([tenantId, nomeCompleto, deletedAt])
 }
 
@@ -636,7 +642,7 @@ model ClinicalEvolution {
   profissionalId        String
   cid10Id               String?
   tipoProfissional      ProfType
-  descricao             String
+  descricao             String   // Criptografado (LGPD)
   dataHora              DateTime @default(now())
   versao                Int      @default(1)
   assinadoDigitalmente  Boolean  @default(false)

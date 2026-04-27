@@ -14,8 +14,10 @@ export class UsersUseCases {
   ) {}
 
   async create(tenantId: string, data: CreateUserDto): Promise<Omit<User, 'password'>> {
+    const cpfHash = this.encryption.hash(data.cpf);
     const encryptedCpf = this.encryption.encrypt(data.cpf);
-    const exists = await this.userRepo.findByCpf(encryptedCpf, tenantId);
+    
+    const exists = await this.userRepo.findByCpf(cpfHash, tenantId);
     if (exists) throw new BadRequestException('CPF já cadastrado nesta clínica.');
 
     const defaultPassword = crypto.randomBytes(8).toString('hex');
@@ -30,7 +32,7 @@ export class UsersUseCases {
       new Date(), new Date(), null
     );
 
-    await this.userRepo.save(newUser, hashedPassword);
+    await this.userRepo.save(newUser, hashedPassword, cpfHash);
     return newUser;
   }
 
@@ -53,16 +55,24 @@ export class UsersUseCases {
     const user = await this.userRepo.findById(id, tenantId);
     if (!user) throw new NotFoundException('Usuário não encontrado.');
 
+    let encryptedCpf = user.cpf;
+    let cpfHash = undefined;
+
+    if (data.cpf) {
+        encryptedCpf = this.encryption.encrypt(data.cpf);
+        cpfHash = this.encryption.hash(data.cpf);
+    }
+
     const updatedUser = new User(
       user.id, user.tenantId, data.roleId || user.roleId, data.nomeCompleto || user.nomeCompleto,
-      data.cpf ? this.encryption.encrypt(data.cpf) : user.cpf, data.email || user.email,
+      encryptedCpf, data.email || user.email,
       data.isActive !== undefined ? data.isActive : user.isActive, user.mustChangePassword,
       data.dataNascimento ? new Date(data.dataNascimento) : user.dataNascimento,
       data.sexo || user.sexo, data.telefone || user.telefone, data.enderecoCompleto || user.enderecoCompleto,
       data.dataAdmissao ? new Date(data.dataAdmissao) : user.dataAdmissao,
       user.createdAt, new Date(), user.deletedAt
     );
-    await this.userRepo.update(updatedUser);
+    await this.userRepo.update(updatedUser, undefined, cpfHash);
   }
 
   async remove(id: string, tenantId: string): Promise<void> {
@@ -71,7 +81,6 @@ export class UsersUseCases {
   }
 
   async changePassword(userId: string, tenantId: string, data: ChangePasswordDto): Promise<void> {
-    // Utiliza o novo método tipado focado na autenticação/validação
     const authData = await this.userRepo.findAuthUserById(userId, tenantId);
     if (!authData) throw new NotFoundException('Usuário não encontrado.');
     
@@ -84,7 +93,7 @@ export class UsersUseCases {
     const newHashedPassword = await bcrypt.hash(data.newPassword, 12);
     const updatedUser = new User(
        user.id, user.tenantId, user.roleId, user.nomeCompleto, user.cpf, user.email,
-       user.isActive, false, // mustChangePassword vira false
+       user.isActive, false,
        user.dataNascimento, user.sexo, user.telefone, user.enderecoCompleto, user.dataAdmissao,
        user.createdAt, new Date(), user.deletedAt
     );
