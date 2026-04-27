@@ -7,38 +7,226 @@ datasource db {
 }
 
 // ==========================================
-// ENUMS GLOBAIS
+// ENUMS GLOBAIS (Formatados por linha)
 // ==========================================
-enum PlanType { BASIC STANDARD ENTERPRISE }
-enum UserRole { ADMIN MEDICO ENFERMEIRO RECEPCIONISTA FATURAMENTO PACIENTE }
-enum Gender { MASCULINO FEMININO OUTRO }
-enum EntityStatus { ATIVO INATIVO }
-enum NurseCategory { ENFERMEIRO TECNICO AUXILIAR }
-enum WardType { UTI ENFERMARIA EMERGENCIA AMBULATORIO CIRURGICO PEDIATRIA MATERNIDADE }
-enum BedType { UTI CLINICO ISOLAMENTO PEDIATRICO CIRURGICO }
-enum BedStatus { LIVRE OCUPADO MANUTENCAO RESERVADO }
-enum BloodGroup { A_POSITIVO A_NEGATIVO B_POSITIVO B_NEGATIVO AB_POSITIVO AB_NEGATIVO O_POSITIVO O_NEGATIVO }
-enum PatientStatus { ATIVO INATIVO OBITO }
-enum InsuranceType { PLANO_SAUDE CONVENIO PARTICULAR SUS }
-enum PharmaForm { COMPRIMIDO CAPSULA INJETAVEL SOLUCAO XAROPE CREME SUPOSITORIO OUTRO }
-enum AdminRoute { ORAL INTRAVENOSA INTRAMUSCULAR SUBCUTANEA TOPICA INALATORIA OUTRO }
-enum ExamType { LABORATORIAL IMAGEM FUNCIONAL OUTRO }
-enum MedRecordStatus { ABERTO FECHADO ARQUIVADO }
-enum ProfType { MEDICO ENFERMEIRO FISIOTERAPEUTA OUTRO }
-enum PrescStatus { ATIVA SUSPENSA CONCLUIDA CANCELADA }
-enum ItemStatus { ATIVO SUSPENSO CONCLUIDO }
-enum MedAdminStatus { MINISTRADO ATRASADO NAO_MINISTRADO RECUSADO_PACIENTE }
-enum UrgencyType { ROTINA URGENTE EMERGENCIA }
-enum ExamReqStatus { SOLICITADO COLETADO EM_ANALISE CONCLUIDO CANCELADO }
-enum HospType { ELETIVA URGENCIA EMERGENCIA }
-enum AccomodationType { ENFERMARIA APARTAMENTO UTI }
-enum DischargeCondition { ALTA_MELHORADO ALTA_CURADO ALTA_PEDIDO OBITO TRANSFERENCIA }
-enum HospStatus { ATIVA ALTA TRANSFERIDO OBITO }
-enum ApptType { CONSULTA RETORNO EXAME PROCEDIMENTO }
-enum ApptStatus { AGENDADO CONFIRMADO EM_ATENDIMENTO REALIZADO CANCELADO FALTOU }
-enum BillingType { INTERNACAO CONSULTA SADT }
-enum BillingGuideStatus { RASCUNHO ENVIADA AUTORIZADA NEGADA PAGA GLOSADA }
-enum BillingItemStatus { AUTORIZADO GLOSADO }
+enum PlanType {
+  BASIC
+  STANDARD
+  ENTERPRISE
+}
+
+enum UserRole {
+  ADMIN
+  MEDICO
+  ENFERMEIRO
+  RECEPCIONISTA
+  FATURAMENTO
+  PACIENTE
+}
+
+enum Gender {
+  MASCULINO
+  FEMININO
+  OUTRO
+}
+
+enum EntityStatus {
+  ATIVO
+  INATIVO
+}
+
+enum NurseCategory {
+  ENFERMEIRO
+  TECNICO
+  AUXILIAR
+}
+
+enum WardType {
+  UTI
+  ENFERMARIA
+  EMERGENCIA
+  AMBULATORIO
+  CIRURGICO
+  PEDIATRIA
+  MATERNIDADE
+}
+
+enum BedType {
+  UTI
+  CLINICO
+  ISOLAMENTO
+  PEDIATRICO
+  CIRURGICO
+}
+
+enum BedStatus {
+  LIVRE
+  OCUPADO
+  MANUTENCAO
+  RESERVADO
+}
+
+enum BloodGroup {
+  A_POSITIVO
+  A_NEGATIVO
+  B_POSITIVO
+  B_NEGATIVO
+  AB_POSITIVO
+  AB_NEGATIVO
+  O_POSITIVO
+  O_NEGATIVO
+}
+
+enum PatientStatus {
+  ATIVO
+  INATIVO
+  OBITO
+}
+
+enum InsuranceType {
+  PLANO_SAUDE
+  CONVENIO
+  PARTICULAR
+  SUS
+}
+
+enum PharmaForm {
+  COMPRIMIDO
+  CAPSULA
+  INJETAVEL
+  SOLUCAO
+  XAROPE
+  CREME
+  SUPOSITORIO
+  OUTRO
+}
+
+enum AdminRoute {
+  ORAL
+  INTRAVENOSA
+  INTRAMUSCULAR
+  SUBCUTANEA
+  TOPICA
+  INALATORIA
+  OUTRO
+}
+
+enum ExamType {
+  LABORATORIAL
+  IMAGEM
+  FUNCIONAL
+  OUTRO
+}
+
+enum MedRecordStatus {
+  ABERTO
+  FECHADO
+  ARQUIVADO
+}
+
+enum ProfType {
+  MEDICO
+  ENFERMEIRO
+  FISIOTERAPEUTA
+  OUTRO
+}
+
+enum PrescStatus {
+  ATIVA
+  SUSPENSA
+  CONCLUIDA
+  CANCELADA
+}
+
+enum ItemStatus {
+  ATIVO
+  SUSPENSO
+  CONCLUIDO
+}
+
+enum MedAdminStatus {
+  MINISTRADO
+  ATRASADO
+  NAO_MINISTRADO
+  RECUSADO_PACIENTE
+}
+
+enum UrgencyType {
+  ROTINA
+  URGENTE
+  EMERGENCIA
+}
+
+enum ExamReqStatus {
+  SOLICITADO
+  COLETADO
+  EM_ANALISE
+  CONCLUIDO
+  CANCELADO
+}
+
+enum HospType {
+  ELETIVA
+  URGENCIA
+  EMERGENCIA
+}
+
+enum AccomodationType {
+  ENFERMARIA
+  APARTAMENTO
+  UTI
+}
+
+enum DischargeCondition {
+  ALTA_MELHORADO
+  ALTA_CURADO
+  ALTA_PEDIDO
+  OBITO
+  TRANSFERENCIA
+}
+
+enum HospStatus {
+  ATIVA
+  ALTA
+  TRANSFERIDO
+  OBITO
+}
+
+enum ApptType {
+  CONSULTA
+  RETORNO
+  EXAME
+  PROCEDIMENTO
+}
+
+enum ApptStatus {
+  AGENDADO
+  CONFIRMADO
+  EM_ATENDIMENTO
+  REALIZADO
+  CANCELADO
+  FALTOU
+}
+
+enum BillingType {
+  INTERNACAO
+  CONSULTA
+  SADT
+}
+
+enum BillingGuideStatus {
+  RASCUNHO
+  ENVIADA
+  AUTORIZADA
+  NEGADA
+  PAGA
+  GLOSADA
+}
+
+enum BillingItemStatus {
+  AUTORIZADO
+  GLOSADO
+}
 
 // ==========================================
 // 1. TENANT E USUÁRIOS
@@ -108,7 +296,7 @@ model User {
   telefone           String?
   enderecoCompleto   Json?
   password           String
-  roleName           UserRole     @default(RECPCIONISTA) // Mantido por compatibilidade rápida, mas roleId dita as regras
+  roleName           UserRole     @default(RECEPCIONISTA)
   isActive           Boolean      @default(true)
   dataAdmissao       DateTime?
   mustChangePassword Boolean      @default(false)

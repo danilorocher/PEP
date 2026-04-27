@@ -2,14 +2,15 @@ import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/c
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import * as Joi from 'joi';
 
-import { PrismaModule } from './prisma/prisma.module';
+// Corrigido o caminho do PrismaModule
+import { PrismaModule } from './shared/infrastructure/database/prisma/prisma.module';
 import { TenantMiddleware } from './common/middlewares/tenant.middleware';
 import { TenantThrottlerGuard } from './common/guards/tenant-throttler.guard';
+import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 
-// Importação de todos os Módulos da Aplicação
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -34,13 +35,11 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
       }),
     }),
     
-    // Configuração de Rate Limiting global (necessário para o ThrottlerGuard funcionar)
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,
     }]),
 
-    // Configuração do BullMQ (Redis) para Filas
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -52,10 +51,8 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
       inject: [ConfigService],
     }),
 
-    // Módulos Core e de Infraestrutura
     PrismaModule,
 
-    // Módulos de Domínio (Funcionalidades)
     AuthModule,
     UsersModule,
     RolesModule,
@@ -67,19 +64,22 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
     AppointmentsModule,
   ],
   providers: [
-    // Define o Throttler Guard Customizado como Global
     {
       provide: APP_GUARD,
       useClass: TenantThrottlerGuard,
     },
+    {
+      // Registra o Interceptor de Auditoria globalmente de forma que aceite Injeção de Dependências
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    }
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // Aplica o middleware de Tenant em todas as rotas da API
     consumer
       .apply(TenantMiddleware)
-      .exclude({ path: 'api/docs', method: RequestMethod.ALL }) // Exclui o Swagger
+      .exclude({ path: 'api/docs', method: RequestMethod.ALL }) 
       .forRoutes('*');
   }
 }
