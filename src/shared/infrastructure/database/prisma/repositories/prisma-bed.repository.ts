@@ -25,11 +25,12 @@ export class PrismaBedRepository implements IBedRepository {
     return this.toDomain(created);
   }
 
-  async findAll(tenantId: string): Promise<Bed[]> {
-    const records = await this.prisma.bed.findMany({
-      where: { tenantId, deletedAt: null },
-    });
-    return records.map(this.toDomain);
+  async findAll(tenantId: string, skip: number, take: number): Promise<{ data: Bed[]; total: number }> {
+    const [data, total] = await Promise.all([
+      this.prisma.bed.findMany({ where: { tenantId, deletedAt: null }, skip, take }),
+      this.prisma.bed.count({ where: { tenantId, deletedAt: null } })
+    ]);
+    return { data: data.map(r => this.toDomain(r)), total };
   }
 
   async findById(id: string, tenantId: string): Promise<Bed | null> {

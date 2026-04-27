@@ -33,8 +33,8 @@ export class BedsController {
 
   @Get()
   @RequirePermissions({ module: 'internacao', action: 'visualizar' })
-  findAll(@Req() req: TenantRequest) {
-    return this.bedsUseCases.findAll(req.tenant.id);
+  findAll(@Req() req: TenantRequest, @Query('page') page: string, @Query('limit') limit: string) {
+    return this.bedsUseCases.findAll(req.tenant.id, Number(page) || 1, Number(limit) || 10);
   }
 
   @Get(':id')

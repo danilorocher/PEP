@@ -12,7 +12,7 @@ export interface OccupancyRate {
 
 export interface IWardRepository {
   create(ward: Ward): Promise<Ward>;
-  findAll(tenantId: string): Promise<Ward[]>;
+  findAll(tenantId: string, skip: number, take: number): Promise<{ data: Ward[]; total: number }>;
   findById(id: string, tenantId: string): Promise<Ward | null>;
   update(ward: Ward): Promise<void>;
   softDelete(id: string, tenantId: string): Promise<void>;

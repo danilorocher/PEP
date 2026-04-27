@@ -34,11 +34,12 @@ export class PrismaWardRepository implements IWardRepository {
     return this.toDomain(created);
   }
 
-  async findAll(tenantId: string): Promise<Ward[]> {
-    const records = await this.prisma.ward.findMany({
-      where: { tenantId, deletedAt: null },
-    });
-    return records.map(this.toDomain);
+  async findAll(tenantId: string, skip: number, take: number): Promise<{ data: Ward[]; total: number }> {
+    const [data, total] = await Promise.all([
+      this.prisma.ward.findMany({ where: { tenantId, deletedAt: null }, skip, take }),
+      this.prisma.ward.count({ where: { tenantId, deletedAt: null } })
+    ]);
+    return { data: data.map(r => this.toDomain(r)), total };
   }
 
   async findById(id: string, tenantId: string): Promise<Ward | null> {

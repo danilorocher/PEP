@@ -32,7 +32,6 @@ export class LoginUseCase {
   async execute(tenantId: string, ip: string, data: LoginDto): Promise<LoginResponse> {
     const user = await this.userRepository.findByEmail(data.email, tenantId);
 
-    // Usa um cast para acessar a senha temporariamente, já que a Entidade pura não deve expor a senha por padrão
     const userRecord = user as any; 
 
     if (!user || !user.isActive) {
@@ -47,20 +46,17 @@ export class LoginUseCase {
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 
-    // Geração do Access Token (15 minutos)
-    const payload = { sub: user.id, email: user.email, role: user.role, tenantId };
+    const payload = { sub: user.id, email: user.email, role: user.roleId, tenantId };
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
       expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
     });
 
-    // Geração do Refresh Token (7 dias)
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN'),
     });
 
-    // Salva o Refresh Token no Redis com expiração de 7 dias (604800 segundos)
     await this.redisService.setRefreshToken(user.id, refreshToken, 604800);
 
     this.logger.log(`[AUDIT] Login com sucesso. IP: ${ip} | Tenant: ${tenantId} | User: ${user.id}`);
@@ -70,8 +66,8 @@ export class LoginUseCase {
       refreshToken,
       user: {
         id: user.id,
-        name: user.name,
-        role: user.role,
+        name: user.nomeCompleto,
+        role: user.roleId,
         mustChangePassword: userRecord.mustChangePassword,
       },
     };

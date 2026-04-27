@@ -37,7 +37,7 @@ export class RolesUseCases {
   }
 
   async remove(id: string, tenantId: string): Promise<void> {
-    await this.findOne(id, tenantId); // Valida existência
+    await this.findOne(id, tenantId);
     await this.roleRepo.softDelete(id, tenantId);
   }
 }

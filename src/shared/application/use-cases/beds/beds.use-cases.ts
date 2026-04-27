@@ -21,8 +21,10 @@ export class BedsUseCases {
     return this.bedRepo.create(newBed);
   }
 
-  async findAll(tenantId: string): Promise<Bed[]> {
-    return this.bedRepo.findAll(tenantId);
+  async findAll(tenantId: string, page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+    const { data, total } = await this.bedRepo.findAll(tenantId, skip, limit);
+    return { data, total, page, limit };
   }
 
   async findAvailable(tenantId: string, tipo?: string, wardId?: string): Promise<Bed[]> {
