@@ -1,4 +1,4 @@
-import { Module } from '@common';
+import { Module } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersUseCases } from '../../shared/application/use-cases/users/users.use-cases';
 import { USER_REPOSITORY_TOKEN } from '../../shared/domain/repositories/user.repository.interface';

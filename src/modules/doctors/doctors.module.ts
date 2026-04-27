@@ -1,6 +1,6 @@
-import { Module } from '@common';
+import { Module } from '@nestjs/common';
 import { DoctorsController } from './doctors.controller';
-import { DoctorsUseCases } from '../../shared/application/use-cases/doctors/doctors.use-cases';
+import { DoctorsUseCases } from '../../shared/application/use-cases/users/doctors/doctors.use-cases';
 import { DOCTOR_REPOSITORY_TOKEN } from '../../shared/domain/repositories/doctor.repository.interface';
 import { PrismaDoctorRepository } from '../../shared/infrastructure/database/prisma/repositories/prisma-doctor.repository';
 import { EncryptionService } from '../../shared/infrastructure/database/prisma/repositories/services/encryption.service';

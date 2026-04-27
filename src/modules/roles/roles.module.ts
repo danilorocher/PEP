@@ -1,6 +1,6 @@
-import { Module } from '@common';
+import { Module } from '@nestjs/common';
 import { RolesController } from './roles.controller';
-import { RolesUseCases } from '../../shared/application/use-cases/roles/roles.use-cases';
+import { RolesUseCases } from '../../shared/application/use-cases/users/roles/roles.use-cases';
 import { ROLE_REPOSITORY_TOKEN } from '../../shared/domain/repositories/role.repository.interface';
 import { PrismaRoleRepository } from '../../shared/infrastructure/database/prisma/repositories/prisma-role.repository';
 

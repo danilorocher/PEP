@@ -1,4 +1,4 @@
-import { SetMetadata } from '@common';
+import { SetMetadata } from '@nestjs/common';
 
 export interface PermissionRequirement {
   module: string; // ex: 'pacientes', 'prontuario'
