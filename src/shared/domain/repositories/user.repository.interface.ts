@@ -1,11 +1,13 @@
 import { User } from '../entities/user.entity';
 
-// Isso é um PORT (Porta) na Clean Architecture
 export interface IUserRepository {
   findById(id: string, tenantId: string): Promise<User | null>;
   findByEmail(email: string, tenantId: string): Promise<User | null>;
-  save(user: User): Promise<void>;
+  findByCpf(cpfCriptografado: string, tenantId: string): Promise<User | null>;
+  findAll(tenantId: string, skip: number, take: number): Promise<{ data: User[]; total: number }>;
+  save(user: User, passwordHash?: string): Promise<void>;
+  update(user: User, passwordHash?: string): Promise<void>;
+  softDelete(id: string, tenantId: string): Promise<void>;
 }
 
-// Criamos um token para o NestJS conseguir injetar a interface
 export const USER_REPOSITORY_TOKEN = Symbol('IUserRepository');

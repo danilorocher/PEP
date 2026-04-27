@@ -1,18 +1,17 @@
-import { Module } from '@nestjs/common';
+import { Module } from '@common';
+import { UsersController } from './users.controller';
+import { UsersUseCases } from '../../shared/application/use-cases/users/users.use-cases';
 import { USER_REPOSITORY_TOKEN } from '../../shared/domain/repositories/user.repository.interface';
 import { PrismaUserRepository } from '../../shared/infrastructure/database/prisma/repositories/prisma-user.repository';
-import { CreateUserUseCase } from '../../shared/application/use-cases/users/create-user.use-case';
+import { EncryptionService } from '../../shared/infrastructure/database/prisma/repositories/services/encryption.service';
 
 @Module({
+  controllers: [UsersController],
   providers: [
-    // 1. Liga o Token (Interface) à classe concreta (Prisma)
-    {
-      provide: USER_REPOSITORY_TOKEN,
-      useClass: PrismaUserRepository,
-    },
-    // 2. Provisão do Use Case
-    CreateUserUseCase,
+    UsersUseCases,
+    EncryptionService,
+    { provide: USER_REPOSITORY_TOKEN, useClass: PrismaUserRepository },
   ],
-  exports: [CreateUserUseCase, USER_REPOSITORY_TOKEN],
+  exports: [UsersUseCases, USER_REPOSITORY_TOKEN],
 })
 export class UsersModule {}
