@@ -17,6 +17,7 @@ export class CreateExamRequestDto {
   @ApiPropertyOptional({ enum: UrgencyType }) @IsOptional() @IsEnum(UrgencyType) urgencia?: UrgencyType;
   @ApiPropertyOptional() @IsOptional() @IsString() observacoes?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() codigoAutorizacaoConvenio?: string;
+  @ApiPropertyOptional() @IsOptional() isConvenio?: boolean;
 }
  
 export class RegisterResultDto {

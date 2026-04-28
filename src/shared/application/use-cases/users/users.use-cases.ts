@@ -32,7 +32,7 @@ export class UsersUseCases {
       new Date(), new Date(), null
     );
 
-    await this.userRepo.save(newUser, hashedPassword, cpfHash);
+    await this.userRepo.save(newUser, hashedPassword);
     return newUser;
   }
 
@@ -72,7 +72,7 @@ export class UsersUseCases {
       data.dataAdmissao ? new Date(data.dataAdmissao) : user.dataAdmissao,
       user.createdAt, new Date(), user.deletedAt
     );
-    await this.userRepo.update(updatedUser, undefined, cpfHash);
+    await this.userRepo.update(updatedUser, undefined);
   }
 
   async remove(id: string, tenantId: string): Promise<void> {

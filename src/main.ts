@@ -5,12 +5,18 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  // Tipamos a aplicação como NestExpressApplication para acessar as configurações de baixo nível do Express
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // --- CORREÇÃO FINAL DO CORS ---
+  // Configuramos de forma explícita para o navegador não bloquear a requisição.
+  app.enableCors({
+    origin: ['http://localhost:3001', 'http://127.0.0.1:3001'], 
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'x-tenant-subdomain'],
+  });
+
   // --- SEGURANÇA: Configuração de Trust Proxy ---
-  // Fundamental para o Rate Limiting funcionar corretamente atrás de Load Balancers (AWS, Cloudflare, Nginx).
-  // Garante que o `req.ip` leia o IP real do cliente via header X-Forwarded-For, evitando bloqueio de usuários legítimos.
   app.set('trust proxy', 1);
 
   // Validação Global
@@ -27,8 +33,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(3000);
-  console.log(`Application is running on: ${await app.getUrl()}`);
-  console.log(`Swagger documentation: ${await app.getUrl()}/api/docs`);
+  // Escutando na porta 3000 em todas as interfaces
+  await app.listen(3000, '0.0.0.0');
+  
+  console.log(`🚀 Backend rodando em: http://localhost:3000`);
+  console.log(`📝 Documentação: http://localhost:3000/api/docs`);
 }
 bootstrap();

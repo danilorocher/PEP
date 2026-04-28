@@ -9,9 +9,23 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {}
  
   onModuleInit() {
+    const rawHost = this.configService.get<string>('REDIS_HOST') || 'localhost';
+    // Força localhost se a variável ainda estiver vindo como 'redis' do .env ou cache
+    const host = rawHost === 'redis' ? 'localhost' : rawHost;
+    const port = this.configService.get<number>('REDIS_PORT') || 6379;
+
     this.redisClient = new Redis({
-      host: this.configService.get<string>('REDIS_HOST'),
-      port: this.configService.get<number>('REDIS_PORT'),
+      host: host,
+      port: port,
+      // Adiciona uma tentativa de reconexão automática para não travar o log
+      retryStrategy: (times) => {
+        return Math.min(times * 50, 2000);
+      }
+    });
+
+    this.redisClient.on('error', (err) => {
+      // Apenas loga o erro sem derrubar a aplicação
+      console.error('⚠️ Erro de Conexão no Redis:', err.message);
     });
   }
  

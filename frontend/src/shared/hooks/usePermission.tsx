@@ -7,12 +7,20 @@ import { useAuthStore } from '../../store/useAuthStore';
 export const usePermission = (module: string, action: string): boolean => {
   const { permissions, user } = useAuthStore();
 
-  // Admin sempre tem permissão total
-  if (user?.role === 'ADMIN') return true;
+  // 1. Admin sempre tem permissão total (Cobre as várias formas que o backend pode enviar a role)
+  const isAdmin = user?.roleName === 'ADMIN' || user?.role === 'ADMIN' || user?.role?.nome === 'ADMIN';
+  if (isAdmin) return true;
 
-  const modulePermissions = permissions[module];
+  // 2. Busca as permissões de forma segura (da store ou de dentro do perfil do usuário)
+  const safePermissions = permissions || user?.role?.permissoes || user?.permissoes || {};
+
+  // 3. Pega as permissões do módulo solicitado
+  const modulePermissions = safePermissions[module];
+  
+  // Se o módulo não existir nas permissões, bloqueia
   if (!modulePermissions) return false;
 
+  // 4. Retorna verdadeiro se a ação (criar, visualizar, etc) estiver como true
   return !!modulePermissions[action];
 };
 

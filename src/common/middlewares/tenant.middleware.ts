@@ -14,31 +14,34 @@ export class TenantMiddleware implements NestMiddleware {
   constructor(private readonly prisma: PrismaService) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
-    const host = req.headers.host;
+    // 1. Pegamos o host e removemos a porta (ex: "localhost:3000" vira apenas "localhost")
+    const hostWithPort = req.headers.host || '';
+    const host = hostWithPort.split(':')[0]; 
 
     if (!host) {
       throw new BadRequestException('Host header é obrigatório.');
     }
 
-    const isIpAddress = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(:[0-9]{1,5})?$/.test(host);
+    // 2. Identificamos se é um acesso local
+    const isLocalhost = host === 'localhost' || host === '127.0.0.1';
     
-    if (isIpAddress || host.startsWith('localhost')) {
-      throw new BadRequestException('Acesso direto por IP ou localhost puro não é permitido.');
+    // 3. Pegamos o subdomínio (primeira parte antes do ponto)
+    let subdomain = host.split('.')[0];
+
+    // 4. Se for acesso local puro, definimos o tenant como 'admin' por padrão
+    // ou tentamos pegar o que o usuário digitou no frontend (enviado via header)
+    if (isLocalhost && (subdomain === 'localhost' || subdomain === '127')) {
+      subdomain = (req.headers['x-tenant-subdomain'] as string) || 'admin';
     }
 
-    const subdomain = host.split('.')[0];
-
-    if (!subdomain) {
-      throw new BadRequestException('Subdomínio não identificado.');
-    }
-
+    // 5. Busca no banco de dados
     const tenant = await this.prisma.tenant.findUnique({
       where: { subdomain },
       select: { id: true, subdomain: true, isActive: true }
     });
 
     if (!tenant) {
-      throw new UnauthorizedException('Tenant não encontrado.');
+      throw new UnauthorizedException(`Clínica/Tenant "${subdomain}" não encontrado.`);
     }
 
     if (!tenant.isActive) {

@@ -21,7 +21,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     const adapter = new PrismaPg(pool);
 
     // Repassa o adapter para a classe pai (PrismaClient)
-    super({ adapter });
+    super();
   }
 
   async onModuleInit() {

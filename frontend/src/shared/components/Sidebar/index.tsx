@@ -11,7 +11,6 @@ import {
   AuditOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { usePermission } from '../../hooks/usePermission';
 
 const { Sider } = Layout;
 
@@ -29,57 +28,53 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       key: '/patients',
       icon: <TeamOutlined />,
       label: 'Pacientes',
-      visible: usePermission('pacientes', 'visualizar'),
     },
     {
       key: '/scheduling',
       icon: <CalendarOutlined />,
       label: 'Agendamento',
-      visible: usePermission('agendamento', 'visualizar'),
     },
     {
       key: '/medical-records',
       icon: <SolutionOutlined />,
       label: 'Prontuários',
-      visible: usePermission('prontuario', 'visualizar'),
     },
     {
       key: '/hospitalizations',
       icon: <MedicineBoxOutlined />,
       label: 'Internações',
-      visible: usePermission('internacao', 'visualizar'),
     },
     {
       key: '/medication',
       icon: <MedicineBoxOutlined />,
       label: 'Medicações',
-      visible: usePermission('medicacao', 'visualizar'),
     },
     {
       key: '/exams',
       icon: <FileSearchOutlined />,
       label: 'Exames',
-      visible: usePermission('exames', 'visualizar'),
     },
     {
       key: '/billing',
       icon: <ContainerOutlined />,
       label: 'Faturamento',
-      visible: usePermission('faturamento', 'visualizar'),
     },
     {
       key: '/reports',
       icon: <AuditOutlined />,
       label: 'Relatórios',
-      visible: usePermission('relatorios', 'visualizar'),
     },
     {
-      key: '/admin',
+      key: 'admin-group',
       icon: <SettingOutlined />,
       label: 'Sistema',
-      visible: usePermission('sistema', 'administrar'),
+      // Apontando para as rotas reais que existem no seu index.tsx
+      children: [
+        { key: '/professionals', label: 'Profissionais' }, 
+        { key: '/admin', label: 'Estrutura Hospitalar' },
+      ]
     },
-  ].filter(item => item.visible !== false);
+  ];
 
   return (
     <Sider trigger={null} collapsible collapsed={collapsed} theme="light" style={{
@@ -97,7 +92,12 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
         mode="inline"
         selectedKeys={[location.pathname]}
         items={menuItems}
-        onClick={({ key }) => navigate(key)}
+        onClick={({ key }) => {
+          // Só navega se o clique não for no grupo "Sistema"
+          if (key !== 'admin-group') {
+            navigate(key);
+          }
+        }}
       />
     </Sider>
   );

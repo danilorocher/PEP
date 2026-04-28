@@ -1,24 +1,11 @@
 import { PrismaClient, PlanType } from '@prisma/client';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import 'dotenv/config';
 
-// 1. Captura a URL do banco a partir do .env
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error('DATABASE_URL não encontrada no arquivo .env');
-}
-
-// 2. Configura o pool de conexão e o adaptador oficial do Prisma 7
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-
-// 3. Inicializa o Prisma Client com o adaptador
-const prisma = new PrismaClient({ adapter });
+// 1. Inicializa o Prisma Client limpo, sem pacotes extras
+const prisma = new PrismaClient();
 
 // Função auxiliar para simular o EncryptionService isoladamente no Seed
 function encryptSensitiveData(text: string): string {
@@ -64,7 +51,7 @@ async function main() {
     const rawData = fs.readFileSync(cidFilePath, 'utf-8');
     const cidData = JSON.parse(rawData);
     
-    // Insere os 13 mil registros ignorando duplicados
+    // Insere os registros ignorando duplicados
     await prisma.cid10.createMany({
       data: cidData,
       skipDuplicates: true,
@@ -161,6 +148,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-    // Opcional: fechar o pool do pg para não deixar processos pendentes
-    await pool.end();
   });

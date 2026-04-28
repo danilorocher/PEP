@@ -17,6 +17,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pep_admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # ===============================
   # REDIS
@@ -27,6 +32,11 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # ===============================
   # API (NESTJS)
@@ -36,8 +46,10 @@ services:
     container_name: pep_api
     restart: always
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -51,6 +63,9 @@ services:
     image: deadly0/bull-board
     container_name: pep_bull_board
     restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
     ports:
       - "3001:3000"
     environment:

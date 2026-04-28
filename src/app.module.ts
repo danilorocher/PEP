@@ -50,12 +50,18 @@ import { AuditModule } from './modules/audit/audit.module';
 
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        connection: {
-          host: configService.get('REDIS_HOST'),
-          port: configService.get('REDIS_PORT'),
-        },
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const rawHost = configService.get<string>('REDIS_HOST');
+        // Se o host vier como "redis" (comum em Docker), forçamos localhost para rodar nativo no Windows
+        const host = rawHost === 'redis' ? 'localhost' : rawHost;
+        
+        return {
+          connection: {
+            host: host,
+            port: configService.get<number>('REDIS_PORT'),
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 
