@@ -1,9 +1,9 @@
 import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { IDoctorRepository, DOCTOR_REPOSITORY_TOKEN } from '../../../domain/repositories/doctor.repository.interface';
-import { Doctor } from '../../../domain/entities/doctor.entity';
-import { EncryptionService } from '../../../infrastructure/database/prisma/repositories/services/encryption.service';
+import { IDoctorRepository, DOCTOR_REPOSITORY_TOKEN } from '../../../../domain/repositories/doctor.repository.interface';
+import { Doctor } from '../../../../domain/entities/doctor.entity';
+import { EncryptionService } from '../../../../infrastructure/database/prisma/repositories/services/encryption.service';
 import * as crypto from 'crypto';
-import { CreateDoctorDto, UpdateDoctorDto } from '../../../../modules/doctors/dto/doctor.dto';
+import { CreateDoctorDto, UpdateDoctorDto } from '../../../../../modules/doctors/dto/doctor.dto';
 
 @Injectable()
 export class DoctorsUseCases {

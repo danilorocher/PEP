@@ -1,9 +1,9 @@
 import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { INurseRepository, NURSE_REPOSITORY_TOKEN } from '../../../domain/repositories/nurse.repository.interface';
-import { Nurse } from '../../../domain/entities/nurse.entity';
-import { EncryptionService } from '../../../infrastructure/database/prisma/repositories/services/encryption.service';
+import { INurseRepository, NURSE_REPOSITORY_TOKEN } from '../../../../domain/repositories/nurse.repository.interface';
+import { Nurse } from '../../../../domain/entities/nurse.entity';
+import { EncryptionService } from '../../../../infrastructure/database/prisma/repositories/services/encryption.service';
 import * as crypto from 'crypto';
-import { CreateNurseDto, UpdateNurseDto } from '../../../../modules/nurses/dto/nurse.dto';
+import { CreateNurseDto, UpdateNurseDto } from '../../../../../modules/nurses/dto/nurse.dto';
 
 @Injectable()
 export class NursesUseCases {

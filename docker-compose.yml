@@ -1,68 +1,61 @@
 version: '3.8'
 
 services:
-  api:
-    build:
-      context: .
-      target: builder # Usando builder para ambiente de dev local
-    container_name: pep_api
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql://pep_admin:pep_password@postgres:5432/pep_plus_db?schema=public
-      - REDIS_HOST=redis
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - .:/app
-      - /app/node_modules
 
+  # ===============================
+  # POSTGRES
+  # ===============================
   postgres:
     image: postgres:15
     container_name: pep_postgres
-    ports:
-      - "5432:5432"
+    restart: always
     environment:
       POSTGRES_USER: pep_admin
       POSTGRES_PASSWORD: pep_password
       POSTGRES_DB: pep_plus_db
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pep_admin -d pep_plus_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
+  # ===============================
+  # REDIS
+  # ===============================
   redis:
-    image: redis:7-alpine
+    image: redis:7
     container_name: pep_redis
+    restart: always
     ports:
       - "6379:6379"
-    command: redis-server --save 60 1 --loglevel warning
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
+  # ===============================
+  # API (NESTJS)
+  # ===============================
+  api:
+    build: .
+    container_name: pep_api
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    command: sh -c "npx prisma migrate deploy && node dist/main.js"
+
+  # ===============================
+  # BULL BOARD (FILA)
+  # ===============================
   bull-board:
-    image: dgtlmoon/bullmq-board
+    image: deadly0/bull-board
     container_name: pep_bull_board
+    restart: always
     ports:
       - "3001:3000"
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_USE_TLS: "false"
-    depends_on:
-      redis:
-        condition: service_healthy
 
 volumes:
   postgres_data:
