@@ -18,7 +18,7 @@ export class GenerateReportDto {
   @IsDateString()
   endDate?: string;
 
-  @ApiProperty({ required: false, type: 'object' })
+  @ApiProperty({ required: false, type: Object })
   @IsOptional()
   @IsObject()
   params?: Record<string, any>;

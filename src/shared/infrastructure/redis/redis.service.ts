@@ -19,6 +19,27 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.redisClient.disconnect();
   }
 
+  // --- MÉTODOS GENÉRICOS (Para uso em Cache de Relatórios, etc.) ---
+  
+  async get(key: string): Promise<string | null> {
+    return this.redisClient.get(key);
+  }
+
+  async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+    if (ttlSeconds) {
+      await this.redisClient.set(key, value, 'EX', ttlSeconds);
+    } else {
+      await this.redisClient.set(key, value);
+    }
+  }
+
+  async del(key: string): Promise<void> {
+    await this.redisClient.del(key);
+  }
+
+
+  // --- MÉTODOS DE AUTENTICAÇÃO (Refresh Tokens) ---
+
   // Salva o refresh token com tempo de expiração em segundos (7 dias = 604800 segundos)
   async setRefreshToken(userId: string, token: string, expiresInSeconds: number): Promise<void> {
     const key = `refresh_token:${userId}`;
