@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Typography, Tag, message, Modal } from 'antd';
-import { PlusOutlined, EditOutlined, EyeOutlined, DeleteOutlined, SolutionOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SolutionOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../shared/services/api';
 import { PatientFilters } from '../../components/PatientFilters';
-import { Can } from '../../../../shared/hooks/usePermission';
 
 const { Title } = Typography;
 
@@ -25,11 +24,15 @@ export const PatientListPage = () => {
           ...currentFilters,
         },
       });
-      setData(response.data.data);
+      // Tratamento seguro para diferentes formatos de resposta
+      const patientList = response.data?.data || response.data || [];
+      const totalCount = response.data?.total || patientList.length || 0;
+
+      setData(Array.isArray(patientList) ? patientList : []);
       setPagination({
         current: page,
         pageSize,
-        total: response.data.total,
+        total: totalCount,
       });
     } catch (error) {
       message.error('Erro ao carregar lista de pacientes');
@@ -78,7 +81,7 @@ export const PatientListPage = () => {
       render: (text: string, record: any) => (
         <Space direction="vertical" size={0}>
           <span style={{ fontWeight: 'bold' }}>{text}</span>
-          <small style={{ color: '#8c8c8c' }}>CPF: {record.cpf}</small>
+          <small style={{ color: '#8c8c8c' }}>CPF: {record.cpf || 'Não informado'}</small>
         </Space>
       ),
     },
@@ -94,7 +97,7 @@ export const PatientListPage = () => {
       key: 'status',
       render: (status: string) => {
         const colors: any = { ATIVO: 'success', INATIVO: 'error', OBITO: 'default' };
-        return <Tag color={colors[status]}>{status}</Tag>;
+        return <Tag color={colors[status] || 'default'}>{status || 'ATIVO'}</Tag>;
       },
     },
     {
@@ -108,21 +111,18 @@ export const PatientListPage = () => {
             onClick={() => navigate(`/medical-records/${record.id}`)}
             title="Acessar Prontuário"
           />
-          <Can module="pacientes" action="editar">
-            <Button 
-              size="small" 
-              icon={<EditOutlined />} 
-              onClick={() => navigate(`/patients/edit/${record.id}`)} 
-            />
-          </Can>
-          <Can module="pacientes" action="excluir">
-            <Button 
-              size="small" 
-              danger 
-              icon={<DeleteOutlined />} 
-              onClick={() => handleDelete(record.id)} 
-            />
-          </Can>
+          {/* Botões liberados das tags Can */}
+          <Button 
+            size="small" 
+            icon={<EditOutlined />} 
+            onClick={() => navigate(`/patients/edit/${record.id}`)} 
+          />
+          <Button 
+            size="small" 
+            danger 
+            icon={<DeleteOutlined />} 
+            onClick={() => handleDelete(record.id)} 
+          />
         </Space>
       ),
     },
@@ -132,11 +132,10 @@ export const PatientListPage = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <Title level={2} style={{ margin: 0 }}>Gestão de Pacientes</Title>
-        <Can module="pacientes" action="criar">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/patients/new')}>
-            Novo Paciente
-          </Button>
-        </Can>
+        {/* Botão Novo Paciente liberado */}
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/patients/new')}>
+          Novo Paciente
+        </Button>
       </div>
 
       <PatientFilters onSearch={handleSearch} onClear={() => handleSearch({})} loading={loading} />

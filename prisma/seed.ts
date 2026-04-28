@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// 1. Inicializa o Prisma Client limpo, sem pacotes extras
+// 1. Inicializa o Prisma Client limpo
 const prisma = new PrismaClient();
 
 // Função auxiliar para simular o EncryptionService isoladamente no Seed
@@ -28,7 +28,7 @@ function encryptSensitiveData(text: string): string {
 }
 
 async function main() {
-  console.log('🌱 Iniciando Seed Corrigido do PEP+...');
+  console.log('🌱 Iniciando Seed Definitivo do PEP+...');
 
   // 1. Populando Catálogos Globais (CID-10 e Especialidades)
   console.log('📦 Inserindo Catálogos Globais...');
@@ -44,21 +44,19 @@ async function main() {
     create: { nome: 'Pediatria', codigoCBOS: '225124' },
   });
 
-  // Tenta buscar o arquivo completo de CID-10 do DATASUS. Caso não ache, insere a amostra corrigida.
   const cidFilePath = path.join(__dirname, 'cid10.json');
   if (fs.existsSync(cidFilePath)) {
     console.log('📄 Arquivo cid10.json encontrado! Carregando a base oficial...');
     const rawData = fs.readFileSync(cidFilePath, 'utf-8');
     const cidData = JSON.parse(rawData);
     
-    // Insere os registros ignorando duplicados
     await prisma.cid10.createMany({
       data: cidData,
       skipDuplicates: true,
     });
     console.log(`✅ Base Oficial do CID-10 carregada com sucesso!`);
   } else {
-    console.log('⚠️ Arquivo cid10.json não encontrado na pasta prisma/. Carregando amostra básica.');
+    console.log('⚠️ Arquivo cid10.json não encontrado. Carregando amostra básica.');
     const cids = [
       { codigo: 'J18.9', descricao: 'Pneumonia não especificada' },
       { codigo: 'I10', descricao: 'Hipertensão essencial (primária)' },
@@ -88,25 +86,48 @@ async function main() {
     },
   });
 
-  // 3. Criação das Roles Padrão (RBAC)
-  console.log('🔐 Criando Perfil de Acesso (Roles)...');
+  // 3. Criação das Roles Padrão (RBAC) - SUPER ADMIN COMPLETO
+  console.log('🔐 Configurando Perfil de Acesso ADMIN com poderes totais...');
   
   const adminPermissions = {
+    // Cadastros e Gestão de Pacientes
     pacientes: { criar: true, editar: true, visualizar: true, excluir: true },
-    prontuario: { visualizar: true, editar: true },
-    prescricao: { criar: true, visualizar: true },
-    exames: { solicitar: true, liberar: true, visualizar: true },
-    internacao: { admitir: true, alta: true, visualizar: true },
-    medicacao: { administrar: true, visualizar: true },
-    agendamento: { criar: true, cancelar: true, visualizar: true },
-    faturamento: { criar: true, visualizar: true },
-    relatorios: { visualizar: true },
+    agendamento: { criar: true, editar: true, visualizar: true, excluir: true, cancelar: true },
+    
+    // Área Clínica
+    prontuario: { criar: true, editar: true, visualizar: true, excluir: true },
+    prescricao: { criar: true, editar: true, visualizar: true, excluir: true },
+    medicacao: { criar: true, editar: true, visualizar: true, excluir: true, administrar: true },
+    exames: { criar: true, editar: true, visualizar: true, excluir: true, solicitar: true, liberar: true },
+    
+    // Estrutura Hospitalar e Internação
+    internacao: { admitir: true, alta: true, visualizar: true, criar: true, editar: true, excluir: true },
+    alas: { criar: true, editar: true, visualizar: true, excluir: true },
+    wards: { criar: true, editar: true, visualizar: true, excluir: true },
+    leitos: { criar: true, editar: true, visualizar: true, excluir: true },
+    beds: { criar: true, editar: true, visualizar: true, excluir: true },
+    estrutura: { administrar: true, criar: true, editar: true, visualizar: true, excluir: true },
+    
+    // Gestão Administrativa e RH
+    usuarios: { criar: true, editar: true, visualizar: true, excluir: true },
+    medicos: { criar: true, editar: true, visualizar: true, excluir: true },
+    enfermeiros: { criar: true, editar: true, visualizar: true, excluir: true },
+    especialidades: { criar: true, editar: true, visualizar: true, excluir: true },
+    roles: { criar: true, editar: true, visualizar: true, excluir: true },
+    
+    // Faturamento e Auditoria
+    faturamento: { criar: true, editar: true, visualizar: true, excluir: true },
+    relatorios: { visualizar: true, exportar: true },
+    
+    // Configurações de Sistema
     sistema: { administrar: true }
   };
 
   const adminRole = await prisma.role.upsert({
     where: { nome_tenantId: { nome: 'ADMIN', tenantId: tenant.id } },
-    update: {},
+    update: {
+      permissoes: adminPermissions, // Atualiza as permissões se a Role já existir
+    },
     create: {
       tenantId: tenant.id,
       nome: 'ADMIN',
@@ -114,8 +135,8 @@ async function main() {
     },
   });
 
-  // 4. Criação do Usuário Admin com Criptografia Real
-  console.log('👤 Criando Usuário Administrador (criptografado)...');
+  // 4. Criação do Usuário Admin
+  console.log('👤 Criando Usuário Administrador...');
   
   const hashedPassword = await bcrypt.hash('Admin@2024!', 12);
   const cpfCriptografado = encryptSensitiveData('00000000000');
@@ -124,7 +145,10 @@ async function main() {
     where: { 
       email_tenantId: { email: 'admin@pep.com', tenantId: tenant.id } 
     },
-    update: {},
+    update: {
+      roleId: adminRole.id,
+      roleName: 'ADMIN'
+    },
     create: {
       tenantId: tenant.id,
       roleId: adminRole.id,
@@ -138,7 +162,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Seed 100% finalizado e seguro com criptografia!');
+  console.log('✅ Seed 100% finalizado com permissões definitivas!');
 }
 
 main()

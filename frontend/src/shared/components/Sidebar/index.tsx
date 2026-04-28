@@ -3,12 +3,14 @@ import {
   DashboardOutlined, 
   TeamOutlined, 
   CalendarOutlined, 
+  IdcardOutlined, 
   MedicineBoxOutlined, 
   FileSearchOutlined,
   ContainerOutlined,
   SolutionOutlined,
   SettingOutlined,
-  AuditOutlined
+  AuditOutlined,
+  BankOutlined // <-- Novo ícone para Unidades/Empresa
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -33,6 +35,11 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       key: '/scheduling',
       icon: <CalendarOutlined />,
       label: 'Agendamento',
+    },
+    {
+      key: '/attendance',
+      icon: <IdcardOutlined />,
+      label: 'Atendimento',
     },
     {
       key: '/medical-records',
@@ -68,9 +75,9 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       key: 'admin-group',
       icon: <SettingOutlined />,
       label: 'Sistema',
-      // Apontando para as rotas reais que existem no seu index.tsx
       children: [
         { key: '/professionals', label: 'Profissionais' }, 
+        { key: '/companies', label: 'Minhas Unidades' }, // <-- Nova opção adicionada aqui
         { key: '/admin', label: 'Estrutura Hospitalar' },
       ]
     },
@@ -93,7 +100,6 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
         selectedKeys={[location.pathname]}
         items={menuItems}
         onClick={({ key }) => {
-          // Só navega se o clique não for no grupo "Sistema"
           if (key !== 'admin-group') {
             navigate(key);
           }

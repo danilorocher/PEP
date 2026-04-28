@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Card, Table, Tag, Button, Space, Typography, message, Modal, Calendar, Badge, Divider, List, Avatar } from 'antd';
-import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, PlayCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, PlayCircleOutlined, EditOutlined, UserDeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../../../../shared/services/api';
 import { AppointmentFormModal } from '../../components/AppointmentFormModal';
-import { Can } from '../../../../shared/hooks/usePermission';
 
 const { Title, Text } = Typography;
 
@@ -23,9 +22,16 @@ export const SchedulingPage = () => {
           dataInicial: selectedDate.startOf('day').toISOString(),
           dataFinal: selectedDate.endOf('day').toISOString()
         }
+      }).catch(err => {
+        console.error('Rota de agendamentos falhou ou está vazia:', err.message);
+        return { data: { data: [] } }; // Fallback seguro
       });
-      setAppointments(response.data);
+      
+      // Lida tanto com paginação quanto com array direto do backend
+      const agendamentos = response.data?.data || response.data || [];
+      setAppointments(Array.isArray(agendamentos) ? agendamentos : []);
     } catch (error) {
+      console.error(error);
       message.error('Erro ao carregar agenda');
     } finally {
       setLoading(false);
@@ -42,7 +48,8 @@ export const SchedulingPage = () => {
       message.success(`Agendamento atualizado: ${action}`);
       fetchSchedule();
     } catch (error) {
-      message.error('Erro ao processar ação');
+      console.error(error);
+      message.error('Erro ao processar ação ou rota inexistente');
     }
   };
 
@@ -50,6 +57,7 @@ export const SchedulingPage = () => {
     const colors: any = {
       AGENDADO: 'blue',
       CONFIRMADO: 'cyan',
+      AGUARDANDO_ATENDIMENTO: 'magenta',
       EM_ATENDIMENTO: 'orange',
       REALIZADO: 'green',
       CANCELADO: 'red',
@@ -63,7 +71,7 @@ export const SchedulingPage = () => {
       title: 'Hora',
       dataIndex: 'dataHora',
       key: 'time',
-      render: (val: string) => dayjs(val).format('HH:mm'),
+      render: (val: string) => val ? dayjs(val).format('HH:mm') : '--:--',
       width: 100,
     },
     {
@@ -71,41 +79,60 @@ export const SchedulingPage = () => {
       key: 'patient',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.patient?.nomeCompleto}</Text>
-          <Text type="secondary" size="small">{rec.tipo}</Text>
+          <Text strong>{rec.patient?.nomeCompleto || 'Paciente não identificado'}</Text>
+          <Text type="secondary" style={{ fontSize: '12px' }}>{rec.tipo || 'Consulta'}</Text>
         </Space>
       )
     },
     {
       title: 'Profissional',
       key: 'doctor',
-      render: (rec: any) => rec.doctor?.nomeCompleto
+      render: (rec: any) => rec.doctor?.nomeCompleto || 'Não atribuído'
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (val: string) => <Tag color={getStatusColor(val)}>{val}</Tag>
+      render: (val: string) => <Tag color={getStatusColor(val)}>{val || 'AGENDADO'}</Tag>
     },
     {
       title: 'Ações',
       key: 'actions',
       render: (rec: any) => (
-        <Space>
-          {rec.status === 'AGENDADO' && (
+        <Space wrap>
+          {/* Status Iniciais */}
+          {(!rec.status || rec.status === 'AGENDADO') && (
             <Button size="small" icon={<CheckCircleOutlined />} onClick={() => handleAction(rec.id, 'confirm')}>Confirmar</Button>
           )}
+          
+          {/* Confirmação e Recepção */}
           {rec.status === 'CONFIRMADO' && (
+            <Button size="small" type="default" onClick={() => handleAction(rec.id, 'arrive')}>Chegou</Button>
+          )}
+          
+          {/* Atendimento */}
+          {(rec.status === 'CONFIRMADO' || rec.status === 'AGUARDANDO_ATENDIMENTO') && (
             <Button size="small" type="primary" icon={<PlayCircleOutlined />} onClick={() => handleAction(rec.id, 'start')}>Atender</Button>
           )}
-          {!['REALIZADO', 'CANCELADO'].includes(rec.status) && (
-            <Button size="small" danger icon={<CloseCircleOutlined />} onClick={() => {
-                Modal.confirm({
-                    title: 'Cancelar Agendamento',
-                    content: 'Deseja realmente cancelar esta consulta?',
-                    onOk: () => handleAction(rec.id, 'cancel')
-                });
-            }}>Cancelar</Button>
+          
+          {/* Ações de Cancelamento / Falta (Disponíveis em status iniciais) */}
+          {!['REALIZADO', 'CANCELADO', 'FALTOU'].includes(rec.status) && (
+            <>
+              <Button size="small" danger onClick={() => {
+                  Modal.confirm({
+                      title: 'Registrar Falta',
+                      content: 'Deseja registrar que o paciente faltou à consulta?',
+                      onOk: () => handleAction(rec.id, 'miss')
+                  });
+              }}>Faltou</Button>
+              <Button size="small" danger icon={<CloseCircleOutlined />} onClick={() => {
+                  Modal.confirm({
+                      title: 'Cancelar Agendamento',
+                      content: 'Deseja realmente cancelar esta consulta?',
+                      onOk: () => handleAction(rec.id, 'cancel')
+                  });
+              }}>Cancelar</Button>
+            </>
           )}
         </Space>
       )
@@ -116,11 +143,10 @@ export const SchedulingPage = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
         <Title level={2}>Agendamento e Recepção</Title>
-        <Can module="agendamento" action="criar">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setSelectedAppt(null); setModalVisible(true); }}>
-            Novo Agendamento
-          </Button>
-        </Can>
+        {/* Botão de Novo Agendamento liberado */}
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setSelectedAppt(null); setModalVisible(true); }}>
+          Novo Agendamento
+        </Button>
       </div>
 
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -148,6 +174,7 @@ export const SchedulingPage = () => {
         onCancel={() => setModalVisible(false)}
         onSuccess={() => { setModalVisible(false); fetchSchedule(); }}
         initialValues={selectedAppt}
+        selectedDate={selectedDate}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { Modal, Form, Input, Select, InputNumber, message } from 'antd';
+import { Modal, Form, Input, Select, InputNumber, message, Row, Col } from 'antd';
 import { useEffect } from 'react';
 import api from '../../../../shared/services/api';
 

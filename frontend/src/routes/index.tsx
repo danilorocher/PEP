@@ -7,8 +7,8 @@ import { DashboardPage } from '../modules/dashboard/pages/Dashboard';
 import { PatientListPage } from '../modules/patients/pages/PatientList';
 import { PatientFormPage } from '../modules/patients/pages/PatientForm';
 import { ProfessionalListPage } from '../modules/professionals/pages/ProfessionalList';
-import { DoctorFormPage } from '../modules/professionals/pages/DoctorForm';
-import { NurseFormPage } from '../modules/professionals/pages/NurseForm';
+// Importação da nova página unificada de Profissionais
+import { ProfessionalFormPage } from '../modules/professionals/pages/ProfessionalForm';
 import { StructureListPage } from '../modules/structure/pages/StructureList';
 import { SchedulingPage } from '../modules/scheduling/pages/Scheduling';
 import { HospitalizationListPage } from '../modules/hospitalizations/pages/HospitalizationList';
@@ -16,6 +16,11 @@ import { MedicalRecordViewPage } from '../modules/medical-records/pages/MedicalR
 import { MedicationListPage } from '../modules/medication/pages/MedicationList';
 import { ReportsPage } from '../modules/reports/pages/Reports';
 import { BillingListPage } from '../modules/billing/pages/BillingList';
+import { ExamListPage } from '../modules/exams/pages/ExamList';
+import { AttendanceListPage } from '../modules/attendance/pages/AttendanceList';
+
+// --- NOVA IMPORTAÇÃO ADICIONADA ---
+import { CompanyFormPage } from '../modules/companies/pages/CompanyForm';
 
 const AppRoutes = () => {
   return (
@@ -33,17 +38,25 @@ const AppRoutes = () => {
         <Route path="/patients/edit/:id" element={<MainLayout><PatientFormPage /></MainLayout>} />
 
         <Route path="/professionals" element={<MainLayout><ProfessionalListPage /></MainLayout>} />
-        <Route path="/professionals/doctor/new" element={<MainLayout><DoctorFormPage /></MainLayout>} />
-        <Route path="/professionals/doctor/edit/:id" element={<MainLayout><DoctorFormPage /></MainLayout>} />
-        <Route path="/professionals/nurse/new" element={<MainLayout><NurseFormPage /></MainLayout>} />
-        <Route path="/professionals/nurse/edit/:id" element={<MainLayout><NurseFormPage /></MainLayout>} />
+        {/* Novas rotas unificadas para o formulário de Profissionais */}
+        <Route path="/professionals/new" element={<MainLayout><ProfessionalFormPage /></MainLayout>} />
+        <Route path="/professionals/edit/:id" element={<MainLayout><ProfessionalFormPage /></MainLayout>} />
+
+        {/* --- NOVA ROTA ADICIONADA: CONFIGURAÇÃO DA UNIDADE/EMPRESA --- */}
+        <Route path="/companies" element={<MainLayout><CompanyFormPage /></MainLayout>} />
 
         <Route path="/admin" element={<MainLayout><StructureListPage /></MainLayout>} />
 
         <Route path="/scheduling" element={<MainLayout><SchedulingPage /></MainLayout>} />
+
+        {/* Nova Rota: Painel de Atendimento/Recepção do dia */}
+        <Route path="/attendance" element={<MainLayout><AttendanceListPage /></MainLayout>} />
         
         <Route path="/hospitalizations" element={<MainLayout><HospitalizationListPage /></MainLayout>} />
 
+        {/* Adicionado: Redireciona o clique do menu para a lista de pacientes */}
+        <Route path="/medical-records" element={<Navigate to="/patients" replace />} />
+        
         <Route path="/medical-records/:patientId" element={<MainLayout><MedicalRecordViewPage /></MainLayout>} />
         
         <Route path="/medication" element={<MainLayout><MedicationListPage /></MainLayout>} />
@@ -53,7 +66,8 @@ const AppRoutes = () => {
         {/* Módulo de Faturamento */}
         <Route path="/billing" element={<MainLayout><BillingListPage /></MainLayout>} />
         
-        <Route path="/exams" element={<MainLayout><h1>Exames</h1></MainLayout>} />
+        {/* Módulo de Exames Atualizado */}
+        <Route path="/exams" element={<MainLayout><ExamListPage /></MainLayout>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
