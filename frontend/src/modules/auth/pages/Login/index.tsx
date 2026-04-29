@@ -4,51 +4,58 @@ import { MailOutlined, LockOutlined, LoginOutlined, BankOutlined, RightOutlined 
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../shared/services/api';
 
+// IMPORTAÇÃO DA FECHADURA CORRETA DO SEU SISTEMA
+import { useAuthStore } from '../../../../store/useAuthStore';
+
 const { Title, Text } = Typography;
 
 export const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [unitSelectionModal, setUnitSelectionModal] = useState(false);
   const [availableUnits, setAvailableUnits] = useState<any[]>([]);
-  const [tempToken, setTempToken] = useState<string | null>(null);
+  
+  // Guardando temporariamente os dados para caso ele tenha múltiplas unidades
+  const [tempAuthData, setTempAuthData] = useState<{token: string, user: any, permissions: any} | null>(null);
   
   const navigate = useNavigate();
+  
+  // PEGANDO A FUNÇÃO DE SALVAR DO SEU STORE
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      // Ajustado para enviar 'email' em vez de 'username'
       const response = await api.post('/auth/login', {
         email: values.email, 
         password: values.password
       });
 
-      const { token, units } = response.data;
+      // O seu backend pode estar retornando 'token' ou 'accessToken' dependendo de como foi feito.
+      // Vamos cobrir ambas as opções para garantir!
+      const token = response.data.accessToken || response.data.token;
+      const { units, user, permissions } = response.data;
 
       // Se o usuário só trabalha em UMA unidade, entra direto!
       if (units && units.length === 1) {
-        handleSelectUnit(units[0], token);
+        handleSelectUnit(units[0], token, user, permissions);
       } 
-      // Se ele trabalha em MAIS DE UMA
+      // Se ele trabalha em MAIS DE UMA unidade
       else if (units && units.length > 1) {
         setAvailableUnits(units);
-        setTempToken(token);
+        setTempAuthData({ token, user, permissions }); // Guarda para usar após o clique do modal
         setUnitSelectionModal(true);
       } 
       else {
-        // Fallback caso o backend já mande o usuário direto
-        localStorage.setItem('@PEP:token', token);
-        localStorage.setItem('@PEP:user', JSON.stringify(response.data.user || {}));
+        // Fallback: Entra normal (para o caso do backend não mandar units)
+        // A MÁGICA ACONTECE AQUI: Usando o seu Store do Zustand!
+        setAuth(user || {}, token, permissions || {});
         message.success('Bem-vindo ao sistema!');
-        
-        // CORREÇÃO AQUI: Forçar reload para atualizar o useAuthStore
-        window.location.href = '/dashboard';
+        navigate('/dashboard'); // Agora o React Router te deixa passar suavemente!
       }
 
     } catch (error: any) {
       console.error(error);
       const errorMsg = error.response?.data?.message;
-      // Tratamento para caso o backend retorne um array de erros (comum em validações DTO)
       if (Array.isArray(errorMsg)) {
         message.error(errorMsg[0]);
       } else {
@@ -59,14 +66,16 @@ export const LoginPage = () => {
     }
   };
 
-  const handleSelectUnit = (unit: any, token: string) => {
-    localStorage.setItem('@PEP:token', token);
+  const handleSelectUnit = (unit: any, token: string, user: any, permissions: any) => {
+    // A unidade nós mantemos no localStorage para não bagunçar o seu store de autenticação
     localStorage.setItem('@PEP:unit', JSON.stringify(unit));
-    setUnitSelectionModal(false);
-    message.success(`Acessando: ${unit.nomeFantasia}`);
     
-    // CORREÇÃO AQUI TAMBÉM: Forçar reload para atualizar o useAuthStore
-    window.location.href = '/dashboard';
+    // Passamos os dados para o Zustand fazer o trabalho dele
+    setAuth(user || {}, token, permissions || {});
+    
+    setUnitSelectionModal(false);
+    message.success(`Acessando: ${unit.nomeFantasia || 'Unidade'}`);
+    navigate('/dashboard');
   };
 
   return (
@@ -84,7 +93,6 @@ export const LoginPage = () => {
         </div>
 
         <Form layout="vertical" onFinish={onFinish}>
-          {/* Ajustado o name para 'email' e adicionada a validação visual do Ant Design */}
           <Form.Item 
             name="email" 
             rules={[
@@ -140,7 +148,7 @@ export const LoginPage = () => {
             <List.Item 
               style={{ cursor: 'pointer', transition: 'background 0.2s', padding: '12px 16px', border: '1px solid #f0f0f0', borderRadius: 8, marginBottom: 8 }}
               className="unit-list-item"
-              onClick={() => handleSelectUnit(unit, tempToken as string)}
+              onClick={() => handleSelectUnit(unit, tempAuthData?.token as string, tempAuthData?.user, tempAuthData?.permissions)}
               actions={[<RightOutlined style={{ color: '#1890ff' }} />]}
             >
               <List.Item.Meta
