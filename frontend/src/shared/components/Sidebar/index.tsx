@@ -56,6 +56,12 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       icon: <MedicineBoxOutlined />,
       label: 'Medicações',
     },
+    // 🔥 NOVA OPÇÃO ADICIONADA AQUI: Módulo de Farmácia Hospitalar
+    {
+      key: '/pharmacy',
+      icon: <MedicineBoxOutlined />,
+      label: 'Farmácia',
+    },
     {
       key: '/exams',
       icon: <FileSearchOutlined />,

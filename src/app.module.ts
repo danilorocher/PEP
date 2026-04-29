@@ -28,6 +28,12 @@ import { HospitalizationsModule } from './modules/hospitalizations/hospitalizati
 import { BillingModule } from './modules/billing/billing.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
+
+// 🔥 Módulo de Assistência ao Paciente
+import { AssistanceModule } from './modules/assistance/assistance.module';
+// 🔥 NOVA IMPORTAÇÃO: Módulo de Farmácia Hospitalar
+import { PharmacyModule } from './modules/pharmacy/pharmacy.module';
 
 @Module({
   imports: [
@@ -85,6 +91,12 @@ import { AuditModule } from './modules/audit/audit.module';
     BillingModule,
     ReportsModule,
     AuditModule,
+    TenantsModule,
+
+    // Módulos Assistenciais
+    AssistanceModule,
+    // 🔥 NOVO MÓDULO REGISTRADO
+    PharmacyModule,
   ],
   providers: [
     {

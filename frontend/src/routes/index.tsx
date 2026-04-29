@@ -22,6 +22,9 @@ import { AttendanceListPage } from '../modules/attendance/pages/AttendanceList';
 // --- NOVA IMPORTAÇÃO ADICIONADA ---
 import { CompanyFormPage } from '../modules/companies/pages/CompanyForm';
 
+// 🔥 NOVA IMPORTAÇÃO: Módulo de Farmácia Hospitalar
+import { PharmacyDashboardPage } from '../modules/pharmacy/pages/PharmacyDashboard';
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -68,6 +71,9 @@ const AppRoutes = () => {
         
         {/* Módulo de Exames Atualizado */}
         <Route path="/exams" element={<MainLayout><ExamListPage /></MainLayout>} />
+
+        {/* 🔥 NOVA ROTA: Módulo de Farmácia Hospitalar */}
+        <Route path="/pharmacy" element={<MainLayout><PharmacyDashboardPage /></MainLayout>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

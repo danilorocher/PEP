@@ -1,6 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, Typography, Spin, message, Space, Tag, Button, Tabs, Divider } from 'antd';
-import { ArrowLeftOutlined, PlusOutlined, FileTextOutlined, MedicineBoxOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { 
+  ArrowLeftOutlined, 
+  PlusOutlined, 
+  FileTextOutlined, 
+  MedicineBoxOutlined, 
+  FileSearchOutlined,
+  SafetyOutlined,
+  LineChartOutlined
+} from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../../../shared/services/api';
 import { Can } from '../../../../shared/hooks/usePermission';
@@ -8,6 +16,12 @@ import { EvolutionTimeline } from '../../components/EvolutionTimeline';
 import { EvolutionFormModal } from '../../components/EvolutionFormModal';
 import { EvolutionHistoryModal } from '../../components/EvolutionHistoryModal';
 import { PrescriptionList } from '../../../prescriptions/components/PrescriptionList';
+
+// Importações do Módulo de Assistência Clínica
+import { VitalSigns } from '../../../assistance/components/VitalSigns';
+import { FluidBalance } from '../../../assistance/components/FluidBalance';
+import { ClinicalDashboard } from '../../../assistance/components/ClinicalDashboard';
+import { RiskAssessments } from '../../../assistance/components/RiskAssessments'; // 🔥 Nova Importação
 
 const { Title, Text } = Typography;
 
@@ -18,6 +32,7 @@ export const MedicalRecordViewPage = () => {
   const [patient, setPatient] = useState<any>(null);
   const [record, setRecord] = useState<any>(null);
   const [evolutions, setEvolutions] = useState<any[]>([]);
+  const [vitalHistory, setVitalHistory] = useState<any[]>([]);
 
   const [formModal, setFormModal] = useState({ visible: false, data: null });
   const [historyModal, setHistoryModal] = useState({ visible: false, id: null });
@@ -25,20 +40,20 @@ export const MedicalRecordViewPage = () => {
   const fetchRecordData = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Busca paciente
-      const pRes = await api.get(`/patients/${patientId}`);
+      const [pRes, rRes] = await Promise.all([
+        api.get(`/patients/${patientId}`),
+        api.get(`/patients/${patientId}/medical-record`)
+      ]);
       setPatient(pRes.data);
-
-      // 2. Busca Prontuário Ativo
-      const rRes = await api.get(`/patients/${patientId}/medical-record`);
       setRecord(rRes.data);
 
-      // 3. Busca Evoluções
       if (rRes.data?.id) {
-        const eRes = await api.get(`/medical-records/${rRes.data.id}/evolutions`, {
-          params: { page: 1, limit: 100 }
-        });
+        const [eRes, vRes] = await Promise.all([
+          api.get(`/medical-records/${rRes.data.id}/evolutions`, { params: { page: 1, limit: 100 } }),
+          api.get(`/assistance/vital-signs/patient/${patientId}`).catch(() => ({ data: { data: [] } }))
+        ]);
         setEvolutions(eRes.data.data);
+        setVitalHistory(vRes.data?.data || []);
       }
     } catch (error: any) {
       if (error.response?.status === 404) {
@@ -77,6 +92,22 @@ export const MedicalRecordViewPage = () => {
             onViewHistory={(id) => setHistoryModal({ visible: true, id })}
           />
         </div>
+      )
+    },
+    {
+      key: 'assistance',
+      label: <span><SafetyOutlined /> Assistência e Monitoramento</span>,
+      children: (
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Card title={<Space><LineChartOutlined /> Monitoramento Clínico</Space>} size="small">
+             <ClinicalDashboard data={vitalHistory} />
+          </Card>
+          
+          {/* Módulos de Enfermagem/Assistência */}
+          <VitalSigns patientId={patientId!} hospitalizationId={record?.hospitalizationId} />
+          <RiskAssessments patientId={patientId!} hospitalizationId={record?.hospitalizationId} /> {/* 🔥 Inserido Aqui */}
+          <FluidBalance patientId={patientId!} hospitalizationId={record?.hospitalizationId} />
+        </Space>
       )
     },
     {

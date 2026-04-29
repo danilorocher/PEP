@@ -230,99 +230,187 @@ enum BillingItemStatus {
 }
 
 // ==========================================
+// ENUMS DE ASSISTÊNCIA AO PACIENTE
+// ==========================================
+enum FluidEntryType {
+  ORAL
+  INTRAVENOSA
+  SONDAS
+  HEMODERIVADOS
+  DIETA
+  OUTROS
+}
+
+enum FluidOutputType {
+  DIURESE
+  DRENO
+  VOMITO
+  SANGRAMENTO
+  EVACUACAO
+  OUTROS
+}
+
+enum FluidBalanceStatus {
+  EM_ANDAMENTO
+  FECHADO
+}
+
+// ==========================================
+// ENUMS DA FARMÁCIA
+// ==========================================
+enum DispensationStatus {
+  PENDENTE
+  SEPARADA
+  DISPENSADA
+  CANCELADA
+}
+
+enum ControlledOperation {
+  ENTRADA
+  SAIDA
+  PERDA
+  DEVOLUCAO
+}
+
+enum InteractionSeverity {
+  LEVE
+  MODERADA
+  GRAVE
+  CONTRAINDICADA
+}
+
+enum KardexAction {
+  PRESCRITO
+  VALIDADO
+  DISPENSADO
+  ADMINISTRADO
+  SUSPENSO
+  DEVOLVIDO
+}
+
+// ==========================================
 // 1. TENANT E USUÁRIOS
 // ==========================================
 model Tenant {
-  id               String       @id @default(uuid())
-  name             String   
-  subdomain        String       @unique 
+  id               String    @id @default(uuid())
+  name             String
+  subdomain        String    @unique
   cnpj             String?
   email            String?
   telefone         String?
   enderecoCompleto Json?
-  plano            PlanType     @default(BASIC)
-  isActive         Boolean      @default(true)
+  plano            PlanType  @default(BASIC)
+  isActive         Boolean   @default(true)
   logoUrl          String?
   configuracoes    Json?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
 
-  users                    User[]
-  roles                    Role[]
-  auditLogs                AuditLog[]
-  doctors                  Doctor[]
-  nurses                   Nurse[]
-  wards                    Ward[]
-  beds                     Bed[]
-  patients                 Patient[]
-  insurances               Insurance[]
-  medications              Medication[]
-  exams                    Exam[]
-  medicalRecords           MedicalRecord[]
-  clinicalEvolutions       ClinicalEvolution[]
-  prescriptions            Prescription[]
-  hospitalizations         Hospitalization[]
-  appointments             Appointment[]
-  examRequests             ExamRequest[]
-  billingGuides            BillingGuide[]
+  users                     User[]
+  roles                     Role[]
+  auditLogs                 AuditLog[]
+  doctors                   Doctor[]
+  nurses                    Nurse[]
+  wards                     Ward[]
+  beds                      Bed[]
+  patients                  Patient[]
+  insurances                Insurance[]
+  medications               Medication[]
+  exams                     Exam[]
+  medicalRecords            MedicalRecord[]
+  clinicalEvolutions        ClinicalEvolution[]
+  prescriptions             Prescription[]
+  hospitalizations          Hospitalization[]
+  appointments              Appointment[]
+  examRequests              ExamRequest[]
+  billingGuides             BillingGuide[]
   medicationAdministrations MedicationAdministration[]
+
+  // Relações Adicionadas - Assistência ao Paciente
+  vitalSigns         VitalSign[]
+  fluidBalances      FluidBalance[]
+  fluidEntries       FluidEntry[]
+  fluidOutputs       FluidOutput[]
+  bradenAssessments  BradenAssessment[]
+  morseAssessments   MorseAssessment[]
+  glasgowAssessments GlasgowAssessment[]
+
+  // Relações Adicionadas - Farmácia Hospitalar
+  medicationStocks MedicationStock[]
+  dispensations    MedicationDispensation[]
+  controlledLogs   ControlledMedicationLog[]
+  drugInteractions DrugInteraction[]
+  kardexRecords    MedicationKardex[]
 
   @@index([deletedAt])
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  tenantId    String
-  nome        String
-  permissoes  Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  id         String    @id @default(uuid())
+  tenantId   String
+  nome       String
+  permissoes Json
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  users       User[]
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  users  User[]
 
   @@unique([nome, tenantId])
   @@index([tenantId, deletedAt])
 }
 
 model User {
-  id                 String       @id @default(uuid())
+  id                 String    @id @default(uuid())
   tenantId           String
   roleId             String
   nomeCompleto       String
-  cpf                String       // Criptografado
-  cpfHash            String?      // Hash para busca (LGPD)
+  cpf                String // Criptografado
+  cpfHash            String? // Hash para busca (LGPD)
   dataNascimento     DateTime?
   sexo               Gender?
-  email              String    
+  email              String
   telefone           String?
   enderecoCompleto   Json?
   password           String
-  roleName           UserRole     @default(RECEPCIONISTA)
-  isActive           Boolean      @default(true)
+  roleName           UserRole  @default(RECEPCIONISTA)
+  isActive           Boolean   @default(true)
   dataAdmissao       DateTime?
-  mustChangePassword Boolean      @default(false)
+  mustChangePassword Boolean   @default(false)
   ultimoAcesso       DateTime?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
   deletedAt          DateTime?
-  
-  tenant             Tenant       @relation(fields: [tenantId], references: [id])
-  role               Role         @relation(fields: [roleId], references: [id])
-  
-  doctor             Doctor?
-  nurse              Nurse?
-  auditLogs          AuditLog[]
-  recordsOpened      MedicalRecord[] @relation("ResponsavelAbertura")
-  evolutionsCreated  ClinicalEvolution[]
-  prescriptions      Prescription[]
-  administrations    MedicationAdministration[]
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  doctor            Doctor?
+  nurse             Nurse?
+  auditLogs         AuditLog[]
+  recordsOpened     MedicalRecord[]            @relation("ResponsavelAbertura")
+  evolutionsCreated ClinicalEvolution[]
+  prescriptions     Prescription[]
+  administrations   MedicationAdministration[]
+
+  // Relações Adicionadas - Assistência ao Paciente
+  vitalSignsRegistered    VitalSign[]
+  fluidBalancesRegistered FluidBalance[]
+  fluidEntriesRegistered  FluidEntry[]
+  fluidOutputsRegistered  FluidOutput[]
+  bradenAssessments       BradenAssessment[]
+  morseAssessments        MorseAssessment[]
+  glasgowAssessments      GlasgowAssessment[]
+
+  // Relações Adicionadas - Farmácia Hospitalar
+  dispensationsApproved MedicationDispensation[]
+  controlledLogs        ControlledMedicationLog[]
+  kardexRecords         MedicationKardex[]
 
   @@unique([email, tenantId])
   @@unique([cpfHash, tenantId])
-  
   @@index([tenantId, deletedAt])
   @@index([tenantId, cpfHash, deletedAt])
   @@index([tenantId, email, deletedAt])
@@ -341,8 +429,8 @@ model AuditLog {
   userAgent       String?
   createdAt       DateTime @default(now())
 
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
-  user            User     @relation(fields: [userId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   @@index([tenantId, entidade, entidadeId])
   @@index([tenantId, userId])
@@ -352,33 +440,33 @@ model AuditLog {
 // 2. PROFISSIONAIS DE SAÚDE
 // ==========================================
 model Doctor {
-  id                      String   @id @default(uuid())
-  tenantId                String
-  userId                  String?  @unique
-  nomeCompleto            String
-  cpf                     String   // Criptografado
-  cpfHash                 String?  // Hash para busca (LGPD)
-  crm                     String
-  ufCrm                   String
-  dataExpedicaoCrm        DateTime?
-  cns                     String?  // Criptografado
-  cnsHash                 String?  // Hash para busca (LGPD)
-  telefoneProfissional    String?
-  emailProfissional       String?
-  registroSecundario      String?
-  assinaturaDigitalPath   String?
-  status                  EntityStatus @default(ATIVO)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-  deletedAt               DateTime?
+  id                    String       @id @default(uuid())
+  tenantId              String
+  userId                String?      @unique
+  nomeCompleto          String
+  cpf                   String // Criptografado
+  cpfHash               String? // Hash para busca (LGPD)
+  crm                   String
+  ufCrm                 String
+  dataExpedicaoCrm      DateTime?
+  cns                   String? // Criptografado
+  cnsHash               String? // Hash para busca (LGPD)
+  telefoneProfissional  String?
+  emailProfissional     String?
+  registroSecundario    String?
+  assinaturaDigitalPath String?
+  status                EntityStatus @default(ATIVO)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  deletedAt             DateTime?
 
-  tenant                  Tenant   @relation(fields: [tenantId], references: [id])
-  user                    User?    @relation(fields: [userId], references: [id])
-  specialties             DoctorSpecialty[]
-  hospitalizationsResp    Hospitalization[] @relation("MedicoResponsavel")
-  hospitalizationsDisch   Hospitalization[] @relation("MedicoAlta")
-  examRequests            ExamRequest[]
-  appointments            Appointment[]
+  tenant                Tenant            @relation(fields: [tenantId], references: [id])
+  user                  User?             @relation(fields: [userId], references: [id])
+  specialties           DoctorSpecialty[]
+  hospitalizationsResp  Hospitalization[] @relation("MedicoResponsavel")
+  hospitalizationsDisch Hospitalization[] @relation("MedicoAlta")
+  examRequests          ExamRequest[]
+  appointments          Appointment[]
 
   @@unique([crm, ufCrm, tenantId])
   @@unique([cpfHash, tenantId])
@@ -387,13 +475,13 @@ model Doctor {
 }
 
 model Specialty {
-  id          String   @id @default(uuid())
-  nome        String   @unique
-  codigoCBOS  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  nome       String   @unique
+  codigoCBOS String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  doctors     DoctorSpecialty[]
+  doctors      DoctorSpecialty[]
   appointments Appointment[]
 }
 
@@ -401,33 +489,33 @@ model DoctorSpecialty {
   doctorId    String
   specialtyId String
 
-  doctor      Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
 
   @@id([doctorId, specialtyId])
 }
 
 model Nurse {
-  id                 String   @id @default(uuid())
+  id                 String        @id @default(uuid())
   tenantId           String
-  userId             String?  @unique
+  userId             String?       @unique
   nomeCompleto       String
-  cpf                String   // Criptografado
-  cpfHash            String?  // Hash para busca (LGPD)
+  cpf                String // Criptografado
+  cpfHash            String? // Hash para busca (LGPD)
   coren              String
   ufCoren            String
   dataExpedicaoCoren DateTime?
   categoria          NurseCategory
-  cns                String?  // Criptografado
-  cnsHash                String?  // Hash para busca (LGPD)
-  podePrescrever     Boolean  @default(false)
-  status             EntityStatus @default(ATIVO)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  cns                String? // Criptografado
+  cnsHash            String? // Hash para busca (LGPD)
+  podePrescrever     Boolean       @default(false)
+  status             EntityStatus  @default(ATIVO)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
   deletedAt          DateTime?
 
-  tenant             Tenant   @relation(fields: [tenantId], references: [id])
-  user               User?    @relation(fields: [userId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id])
 
   @@unique([coren, ufCoren, tenantId])
   @@unique([cpfHash, tenantId])
@@ -439,19 +527,19 @@ model Nurse {
 // 3. ESTRUTURA HOSPITALAR E CATÁLOGOS
 // ==========================================
 model Ward {
-  id          String   @id @default(uuid())
-  tenantId    String
-  nome        String
-  tipo        WardType
-  capacidade  Int
-  andar       String?
-  status      EntityStatus @default(ATIVO)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  id         String       @id @default(uuid())
+  tenantId   String
+  nome       String
+  tipo       WardType
+  capacidade Int
+  andar      String?
+  status     EntityStatus @default(ATIVO)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  deletedAt  DateTime?
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  beds        Bed[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  beds             Bed[]
   hospitalizations Hospitalization[]
 
   @@index([tenantId, deletedAt])
@@ -459,18 +547,18 @@ model Ward {
 }
 
 model Bed {
-  id          String   @id @default(uuid())
-  tenantId    String
-  wardId      String
-  numero      String
-  tipo        BedType
-  status      BedStatus @default(LIVRE)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  id        String    @id @default(uuid())
+  tenantId  String
+  wardId    String
+  numero    String
+  tipo      BedType
+  status    BedStatus @default(LIVRE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  ward        Ward     @relation(fields: [wardId], references: [id])
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  ward             Ward              @relation(fields: [wardId], references: [id])
   hospitalizations Hospitalization[]
 
   @@unique([numero, wardId, tenantId])
@@ -480,23 +568,23 @@ model Bed {
 }
 
 model Insurance {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   tenantId    String
   nome        String
   registroANS String?
   tipo        InsuranceType
   telefone    String?
   email       String?
-  status      EntityStatus @default(ATIVO)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      EntityStatus  @default(ATIVO)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   deletedAt   DateTime?
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  patients    Patient[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  patients         Patient[]
   hospitalizations Hospitalization[]
-  appointments Appointment[]
-  billingGuides BillingGuide[]
+  appointments     Appointment[]
+  billingGuides    BillingGuide[]
 
   @@index([tenantId, deletedAt])
 }
@@ -511,53 +599,60 @@ model Cid10 {
   createdAt          DateTime @default(now())
 
   evolutions         ClinicalEvolution[]
-  hospitalizationsAd Hospitalization[] @relation("CidAdmissao")
-  hospitalizationsDi Hospitalization[] @relation("CidAlta")
+  hospitalizationsAd Hospitalization[]   @relation("CidAdmissao")
+  hospitalizationsDi Hospitalization[]   @relation("CidAlta")
   appointments       Appointment[]
   examRequests       ExamRequest[]
 }
 
 model Medication {
-  id                      String   @id @default(uuid())
-  tenantId                String
-  nome                    String
-  principioAtivo          String?
-  concentracao            String?
-  formaFarmaceutica       PharmaForm
-  fabricante              String?
-  codigoInterno           String?
-  codigoEAN               String?
-  controleEspecial        Boolean  @default(false)
-  viaAdministracaoPadrao  AdminRoute
-  status                  EntityStatus @default(ATIVO)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-  deletedAt               DateTime?
+  id                     String       @id @default(uuid())
+  tenantId               String
+  nome                   String
+  principioAtivo         String?
+  concentracao           String?
+  formaFarmaceutica      PharmaForm
+  fabricante             String?
+  codigoInterno          String?
+  codigoEAN              String?
+  controleEspecial       Boolean      @default(false)
+  viaAdministracaoPadrao AdminRoute
+  status                 EntityStatus @default(ATIVO)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  deletedAt              DateTime?
 
-  tenant                  Tenant   @relation(fields: [tenantId], references: [id])
-  prescriptionItems       PrescriptionItem[]
-  billingItems            BillingItem[]
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  prescriptionItems PrescriptionItem[]
+  billingItems      BillingItem[]
+
+  // Relações Adicionadas - Farmácia Hospitalar
+  stocks         MedicationStock[]
+  controlledLogs ControlledMedicationLog[]
+  kardexRecords  MedicationKardex[]
+  interactionsA  DrugInteraction[]         @relation("InteractionMedA")
+  interactionsB  DrugInteraction[]         @relation("InteractionMedB")
 
   @@index([tenantId, deletedAt])
 }
 
 model Exam {
-  id                   String   @id @default(uuid())
+  id                   String       @id @default(uuid())
   tenantId             String
   nome                 String
   tipo                 ExamType
-  tempoMedioResultado  Int?     // em horas
+  tempoMedioResultado  Int? // em horas
   preparacaoNecessaria String?
   codigoInterno        String?
   codigoTUSS           String?
   status               EntityStatus @default(ATIVO)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
   deletedAt            DateTime?
 
-  tenant               Tenant   @relation(fields: [tenantId], references: [id])
-  requests             ExamRequest[]
-  billingItems         BillingItem[]
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  requests     ExamRequest[]
+  billingItems BillingItem[]
 
   @@index([tenantId, deletedAt])
 }
@@ -566,14 +661,14 @@ model Exam {
 // 4. PACIENTES E PRONTUÁRIO
 // ==========================================
 model Patient {
-  id                      String   @id @default(uuid())
+  id                      String        @id @default(uuid())
   tenantId                String
   convenioId              String?
   nomeCompleto            String
-  cpf                     String   // Criptografado
-  cpfHash                 String?  // Hash para busca (LGPD)
-  cns                     String?  // Criptografado
-  cnsHash                 String?  // Hash para busca (LGPD)
+  cpf                     String // Criptografado
+  cpfHash                 String? // Hash para busca (LGPD)
+  cns                     String? // Criptografado
+  cnsHash                 String? // Hash para busca (LGPD)
   dataNascimento          DateTime
   sexo                    Gender
   nomeMae                 String?
@@ -588,18 +683,29 @@ model Patient {
   historicoClinico        String?
   grupoSanguineo          BloodGroup?
   status                  PatientStatus @default(ATIVO)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
   deletedAt               DateTime?
 
-  tenant                  Tenant     @relation(fields: [tenantId], references: [id])
-  insurance               Insurance? @relation(fields: [convenioId], references: [id])
-  
-  medicalRecords          MedicalRecord[]
-  hospitalizations        Hospitalization[]
-  appointments            Appointment[]
-  examRequests            ExamRequest[]
-  billingGuides           BillingGuide[]
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  insurance Insurance? @relation(fields: [convenioId], references: [id])
+
+  medicalRecords   MedicalRecord[]
+  hospitalizations Hospitalization[]
+  appointments     Appointment[]
+  examRequests     ExamRequest[]
+  billingGuides    BillingGuide[]
+
+  // Relações Adicionadas - Assistência ao Paciente
+  vitalSigns         VitalSign[]
+  fluidBalances      FluidBalance[]
+  bradenAssessments  BradenAssessment[]
+  morseAssessments   MorseAssessment[]
+  glasgowAssessments GlasgowAssessment[]
+
+  // Relações Adicionadas - Farmácia Hospitalar
+  controlledLogs ControlledMedicationLog[]
+  kardexRecords  MedicationKardex[]
 
   @@unique([cpfHash, tenantId])
   @@index([tenantId, deletedAt])
@@ -608,26 +714,29 @@ model Patient {
 }
 
 model MedicalRecord {
-  id                    String   @id @default(uuid())
+  id                    String          @id @default(uuid())
   tenantId              String
   patientId             String
-  numero                String   
-  abertoEm              DateTime @default(now())
+  numero                String
+  abertoEm              DateTime        @default(now())
   fechadoEm             DateTime?
   status                MedRecordStatus @default(ABERTO)
   responsavelAberturaId String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
   deletedAt             DateTime?
 
-  tenant                Tenant   @relation(fields: [tenantId], references: [id])
-  patient               Patient  @relation(fields: [patientId], references: [id])
-  responsavelAbertura   User?    @relation("ResponsavelAbertura", fields: [responsavelAberturaId], references: [id])
-  
-  evolutions            ClinicalEvolution[]
-  prescriptions         Prescription[]
-  examRequests          ExamRequest[]
-  hospitalizations      Hospitalization[]
+  tenant              Tenant  @relation(fields: [tenantId], references: [id])
+  patient             Patient @relation(fields: [patientId], references: [id])
+  responsavelAbertura User?   @relation("ResponsavelAbertura", fields: [responsavelAberturaId], references: [id])
+
+  evolutions       ClinicalEvolution[]
+  prescriptions    Prescription[]
+  examRequests     ExamRequest[]
+  hospitalizations Hospitalization[]
+
+  // Relações Adicionadas - Farmácia Hospitalar
+  kardexRecords MedicationKardex[]
 
   @@unique([numero, tenantId])
   @@index([tenantId, deletedAt])
@@ -635,29 +744,29 @@ model MedicalRecord {
 }
 
 model ClinicalEvolution {
-  id                    String   @id @default(uuid())
-  tenantId              String
-  medicalRecordId       String
-  hospitalizationId     String?
-  profissionalId        String
-  cid10Id               String?
-  tipoProfissional      ProfType
-  descricao             String   // Criptografado (LGPD)
-  dataHora              DateTime @default(now())
-  versao                Int      @default(1)
-  assinadoDigitalmente  Boolean  @default(false)
-  assinaturaHash        String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  deletedAt             DateTime?
+  id                   String    @id @default(uuid())
+  tenantId             String
+  medicalRecordId      String
+  hospitalizationId    String?
+  profissionalId       String
+  cid10Id              String?
+  tipoProfissional     ProfType
+  descricao            String // Criptografado (LGPD)
+  dataHora             DateTime  @default(now())
+  versao               Int       @default(1)
+  assinadoDigitalmente Boolean   @default(false)
+  assinaturaHash       String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  deletedAt            DateTime?
 
-  tenant                Tenant          @relation(fields: [tenantId], references: [id])
-  medicalRecord         MedicalRecord   @relation(fields: [medicalRecordId], references: [id])
-  hospitalization       Hospitalization? @relation(fields: [hospitalizationId], references: [id])
-  profissional          User            @relation(fields: [profissionalId], references: [id])
-  cid10                 Cid10?          @relation(fields: [cid10Id], references: [id])
-  
-  history               ClinicalEvolutionHistory[]
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  medicalRecord   MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  profissional    User             @relation(fields: [profissionalId], references: [id])
+  cid10           Cid10?           @relation(fields: [cid10Id], references: [id])
+
+  history ClinicalEvolutionHistory[]
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, medicalRecordId, deletedAt])
@@ -672,81 +781,87 @@ model ClinicalEvolutionHistory {
   alteradoPor   String
   createdAt     DateTime @default(now())
 
-  evolution     ClinicalEvolution @relation(fields: [evolutionId], references: [id], onDelete: Cascade)
+  evolution ClinicalEvolution @relation(fields: [evolutionId], references: [id], onDelete: Cascade)
 }
 
 // ==========================================
 // 5. PRESCRIÇÕES E EXAMES
 // ==========================================
 model Prescription {
-  id                    String   @id @default(uuid())
-  tenantId              String
-  medicalRecordId       String
-  hospitalizationId     String?
-  prescritoPor          String
-  tipoPrescrito         ProfType
-  dataHora              DateTime @default(now())
-  status                PrescStatus @default(ATIVA)
-  observacoes           String?
-  assinadaDigitalmente  Boolean  @default(false)
-  assinaturaHash        String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  deletedAt             DateTime?
+  id                   String      @id @default(uuid())
+  tenantId             String
+  medicalRecordId      String
+  hospitalizationId    String?
+  prescritoPor         String
+  tipoPrescrito        ProfType
+  dataHora             DateTime    @default(now())
+  status               PrescStatus @default(ATIVA)
+  observacoes          String?
+  assinadaDigitalmente Boolean     @default(false)
+  assinaturaHash       String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  deletedAt            DateTime?
 
-  tenant                Tenant           @relation(fields: [tenantId], references: [id])
-  medicalRecord         MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
-  hospitalization       Hospitalization? @relation(fields: [hospitalizationId], references: [id])
-  prescritor            User             @relation(fields: [prescritoPor], references: [id])
-  
-  items                 PrescriptionItem[]
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  medicalRecord   MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  prescritor      User             @relation(fields: [prescritoPor], references: [id])
+
+  items PrescriptionItem[]
+
+  // Relações Adicionadas - Farmácia Hospitalar
+  dispensations MedicationDispensation[]
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, medicalRecordId, deletedAt])
 }
 
 model PrescriptionItem {
-  id                  String   @id @default(uuid())
+  id                  String     @id @default(uuid())
   prescriptionId      String
   medicationId        String
   dosagem             String
   viaAdministracao    AdminRoute
   frequencia          String
-  horariosProgramados String[] 
+  horariosProgramados String[]
   duracaoDias         Int?
   dataInicio          DateTime
   dataFim             DateTime?
   observacoes         String?
   status              ItemStatus @default(ATIVO)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
   deletedAt           DateTime?
 
-  prescription        Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
-  medication          Medication   @relation(fields: [medicationId], references: [id])
-  administrations     MedicationAdministration[]
+  prescription    Prescription               @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medication      Medication                 @relation(fields: [medicationId], references: [id])
+  administrations MedicationAdministration[]
+
+  // Relações Adicionadas - Farmácia Hospitalar
+  dispensationItems DispensationItem[]
 
   @@index([prescriptionId, deletedAt])
 }
 
 model MedicationAdministration {
-  id                    String   @id @default(uuid())
-  tenantId              String
-  prescriptionItemId    String
-  hospitalizationId     String?
-  administradoPor       String?
-  dataHoraProgamada     DateTime
-  dataHoraAdministrada  DateTime?
-  status                MedAdminStatus @default(NAO_MINISTRADO)
-  observacoes           String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  deletedAt             DateTime?
+  id                   String         @id @default(uuid())
+  tenantId             String
+  prescriptionItemId   String
+  hospitalizationId    String?
+  administradoPor      String?
+  dataHoraProgamada    DateTime
+  dataHoraAdministrada DateTime?
+  status               MedAdminStatus @default(NAO_MINISTRADO)
+  observacoes          String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  deletedAt            DateTime?
 
-  tenant                Tenant           @relation(fields: [tenantId], references: [id])
-  prescriptionItem      PrescriptionItem @relation(fields: [prescriptionItemId], references: [id])
-  hospitalization       Hospitalization? @relation(fields: [hospitalizationId], references: [id])
-  administrador         User?            @relation(fields: [administradoPor], references: [id])
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
+  prescriptionItem PrescriptionItem @relation(fields: [prescriptionItemId], references: [id])
+  hospitalization  Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  administrador    User?            @relation(fields: [administradoPor], references: [id])
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, hospitalizationId, deletedAt])
@@ -754,7 +869,7 @@ model MedicationAdministration {
 }
 
 model ExamRequest {
-  id                        String   @id @default(uuid())
+  id                        String        @id @default(uuid())
   tenantId                  String
   medicalRecordId           String
   hospitalizationId         String?
@@ -762,24 +877,24 @@ model ExamRequest {
   patientId                 String
   examId                    String
   cid10Id                   String?
-  dataHoraSolicitacao       DateTime @default(now())
-  urgencia                  UrgencyType @default(ROTINA)
+  dataHoraSolicitacao       DateTime      @default(now())
+  urgencia                  UrgencyType   @default(ROTINA)
   status                    ExamReqStatus @default(SOLICITADO)
   resultado                 String?
   dataHoraResultado         DateTime?
   observacoes               String?
   codigoAutorizacaoConvenio String?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
   deletedAt                 DateTime?
 
-  tenant                    Tenant           @relation(fields: [tenantId], references: [id])
-  medicalRecord             MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
-  hospitalization           Hospitalization? @relation(fields: [hospitalizationId], references: [id])
-  doctor                    Doctor           @relation(fields: [solicitadoPor], references: [id])
-  patient                   Patient          @relation(fields: [patientId], references: [id])
-  exam                      Exam             @relation(fields: [examId], references: [id])
-  cid10                     Cid10?           @relation(fields: [cid10Id], references: [id])
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  medicalRecord   MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  doctor          Doctor           @relation(fields: [solicitadoPor], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  exam            Exam             @relation(fields: [examId], references: [id])
+  cid10           Cid10?           @relation(fields: [cid10Id], references: [id])
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, patientId, deletedAt])
@@ -790,47 +905,54 @@ model ExamRequest {
 // 6. INTERNAÇÃO E AGENDAMENTO
 // ==========================================
 model Hospitalization {
-  id                    String   @id @default(uuid())
-  tenantId              String
-  medicalRecordId       String
-  patientId             String
-  bedId                 String
-  wardId                String
-  medicoResponsavelId   String
-  cid10AdmissaoId       String
-  cid10AltaId           String?
-  convenioId            String?
-  medicoAltaId          String?
-  dataEntrada           DateTime @default(now())
-  dataPrevistaAlta      DateTime?
-  dataAlta              DateTime?
-  motivoInternacao      String
-  tipoInternacao        HospType
-  tipoAcomodacao        AccomodationType
-  numeroGuiaInternacao  String?
-  sumarioAlta           String?
-  condicaoPacienteAlta  DischargeCondition?
-  status                HospStatus @default(ATIVA)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  deletedAt             DateTime?
+  id                   String              @id @default(uuid())
+  tenantId             String
+  medicalRecordId      String
+  patientId            String
+  bedId                String
+  wardId               String
+  medicoResponsavelId  String
+  cid10AdmissaoId      String
+  cid10AltaId          String?
+  convenioId           String?
+  medicoAltaId         String?
+  dataEntrada          DateTime            @default(now())
+  dataPrevistaAlta     DateTime?
+  dataAlta             DateTime?
+  motivoInternacao     String
+  tipoInternacao       HospType
+  tipoAcomodacao       AccomodationType
+  numeroGuiaInternacao String?
+  sumarioAlta          String?
+  condicaoPacienteAlta DischargeCondition?
+  status               HospStatus          @default(ATIVA)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  deletedAt            DateTime?
 
-  tenant                Tenant         @relation(fields: [tenantId], references: [id])
-  medicalRecord         MedicalRecord  @relation(fields: [medicalRecordId], references: [id])
-  patient               Patient        @relation(fields: [patientId], references: [id])
-  bed                   Bed            @relation(fields: [bedId], references: [id])
-  ward                  Ward           @relation(fields: [wardId], references: [id])
-  medicoResponsavel     Doctor         @relation("MedicoResponsavel", fields: [medicoResponsavelId], references: [id])
-  medicoAlta            Doctor?        @relation("MedicoAlta", fields: [medicoAltaId], references: [id])
-  cidAdmissao           Cid10          @relation("CidAdmissao", fields: [cid10AdmissaoId], references: [id])
-  cidAlta               Cid10?         @relation("CidAlta", fields: [cid10AltaId], references: [id])
-  insurance             Insurance?     @relation(fields: [convenioId], references: [id])
+  tenant            Tenant        @relation(fields: [tenantId], references: [id])
+  medicalRecord     MedicalRecord @relation(fields: [medicalRecordId], references: [id])
+  patient           Patient       @relation(fields: [patientId], references: [id])
+  bed               Bed           @relation(fields: [bedId], references: [id])
+  ward              Ward          @relation(fields: [wardId], references: [id])
+  medicoResponsavel Doctor        @relation("MedicoResponsavel", fields: [medicoResponsavelId], references: [id])
+  medicoAlta        Doctor?       @relation("MedicoAlta", fields: [medicoAltaId], references: [id])
+  cidAdmissao       Cid10         @relation("CidAdmissao", fields: [cid10AdmissaoId], references: [id])
+  cidAlta           Cid10?        @relation("CidAlta", fields: [cid10AltaId], references: [id])
+  insurance         Insurance?    @relation(fields: [convenioId], references: [id])
 
-  evolutions            ClinicalEvolution[]
-  prescriptions         Prescription[]
-  administrations       MedicationAdministration[]
-  examRequests          ExamRequest[]
-  billingGuides         BillingGuide[]
+  evolutions      ClinicalEvolution[]
+  prescriptions   Prescription[]
+  administrations MedicationAdministration[]
+  examRequests    ExamRequest[]
+  billingGuides   BillingGuide[]
+
+  // Relações Adicionadas - Assistência ao Paciente
+  vitalSigns         VitalSign[]
+  fluidBalances      FluidBalance[]
+  bradenAssessments  BradenAssessment[]
+  morseAssessments   MorseAssessment[]
+  glasgowAssessments GlasgowAssessment[]
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, patientId, deletedAt])
@@ -838,32 +960,32 @@ model Hospitalization {
 }
 
 model Appointment {
-  id                    String   @id @default(uuid())
-  tenantId              String
-  patientId             String
-  doctorId              String
-  specialtyId           String
-  convenioId            String?
-  cid10Id               String?
-  dataHora              DateTime
-  duracao               Int      // em minutos
-  tipo                  ApptType
-  status                ApptStatus @default(AGENDADO)
-  motivoCancelamento    String?
-  numeroGuiaConsulta    String?
-  observacoes           String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  deletedAt             DateTime?
+  id                 String     @id @default(uuid())
+  tenantId           String
+  patientId          String
+  doctorId           String
+  specialtyId        String
+  convenioId         String?
+  cid10Id            String?
+  dataHora           DateTime
+  duracao            Int // em minutos
+  tipo               ApptType
+  status             ApptStatus @default(AGENDADO)
+  motivoCancelamento String?
+  numeroGuiaConsulta String?
+  observacoes        String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  deletedAt          DateTime?
 
-  tenant                Tenant     @relation(fields: [tenantId], references: [id])
-  patient               Patient    @relation(fields: [patientId], references: [id])
-  doctor                Doctor     @relation(fields: [doctorId], references: [id])
-  specialty             Specialty  @relation(fields: [specialtyId], references: [id])
-  insurance             Insurance? @relation(fields: [convenioId], references: [id])
-  cid10                 Cid10?     @relation(fields: [cid10Id], references: [id])
-  
-  billingGuides         BillingGuide[]
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  patient   Patient    @relation(fields: [patientId], references: [id])
+  doctor    Doctor     @relation(fields: [doctorId], references: [id])
+  specialty Specialty  @relation(fields: [specialtyId], references: [id])
+  insurance Insurance? @relation(fields: [convenioId], references: [id])
+  cid10     Cid10?     @relation(fields: [cid10Id], references: [id])
+
+  billingGuides BillingGuide[]
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, doctorId, dataHora, deletedAt])
@@ -875,31 +997,31 @@ model Appointment {
 // 7. FATURAMENTO (TISS BÁSICO)
 // ==========================================
 model BillingGuide {
-  id                  String   @id @default(uuid())
-  tenantId            String
-  patientId           String
-  convenioId          String
-  hospitalizationId   String?
-  appointmentId       String?
-  tipo                BillingType
-  numeroGuia          String?
-  dataEmissao         DateTime @default(now())
-  dataAutorizacao     DateTime?
-  codigoAutorizacao   String?
-  valorTotal          Float    @default(0.0)
-  status              BillingGuideStatus @default(RASCUNHO)
-  observacoes         String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  deletedAt           DateTime?
+  id                String             @id @default(uuid())
+  tenantId          String
+  patientId         String
+  convenioId        String
+  hospitalizationId String?
+  appointmentId     String?
+  tipo              BillingType
+  numeroGuia        String?
+  dataEmissao       DateTime           @default(now())
+  dataAutorizacao   DateTime?
+  codigoAutorizacao String?
+  valorTotal        Float              @default(0.0)
+  status            BillingGuideStatus @default(RASCUNHO)
+  observacoes       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
 
-  tenant              Tenant           @relation(fields: [tenantId], references: [id])
-  patient             Patient          @relation(fields: [patientId], references: [id])
-  insurance           Insurance        @relation(fields: [convenioId], references: [id])
-  hospitalization     Hospitalization? @relation(fields: [hospitalizationId], references: [id])
-  appointment         Appointment?     @relation(fields: [appointmentId], references: [id])
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  insurance       Insurance        @relation(fields: [convenioId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  appointment     Appointment?     @relation(fields: [appointmentId], references: [id])
 
-  items               BillingItem[]
+  items BillingItem[]
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, status, deletedAt])
@@ -907,24 +1029,389 @@ model BillingGuide {
 }
 
 model BillingItem {
-  id                    String   @id @default(uuid())
+  id                    String            @id @default(uuid())
   billingGuideId        String
   examId                String?
   medicationId          String?
   procedimentoDescricao String
   codigoTUSS            String?
-  quantidade            Int      @default(1)
+  quantidade            Int               @default(1)
   valorUnitario         Float
   valorTotal            Float
   status                BillingItemStatus @default(AUTORIZADO)
   motivoGlosa           String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
   deletedAt             DateTime?
 
-  billingGuide          BillingGuide @relation(fields: [billingGuideId], references: [id], onDelete: Cascade)
-  exam                  Exam?        @relation(fields: [examId], references: [id])
-  medication            Medication?  @relation(fields: [medicationId], references: [id])
+  billingGuide BillingGuide @relation(fields: [billingGuideId], references: [id], onDelete: Cascade)
+  exam         Exam?        @relation(fields: [examId], references: [id])
+  medication   Medication?  @relation(fields: [medicationId], references: [id])
 
   @@index([billingGuideId, deletedAt])
+}
+
+// ==========================================
+// 8. ASSISTÊNCIA: SINAIS VITAIS
+// ==========================================
+model VitalSign {
+  id                String  @id @default(uuid())
+  tenantId          String
+  patientId         String
+  hospitalizationId String?
+  registeredById    String
+
+  dataHora DateTime @default(now())
+
+  // Parâmetros vitais
+  systolicPressure  Int // Pressão Sistólica (mmHg)
+  diastolicPressure Int // Pressão Diastólica (mmHg)
+  temperature       Float // Temperatura (ºC)
+  heartRate         Int // Frequência Cardíaca (bpm)
+  respiratoryRate   Int // Frequência Respiratória (irpm)
+  spo2              Int // Saturação de O2 (%)
+  painScale         Int // Escala de Dor (0 a 10)
+
+  observacoes String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  registeredBy    User             @relation(fields: [registeredById], references: [id])
+
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, patientId, dataHora])
+  @@index([tenantId, hospitalizationId])
+}
+
+// ==========================================
+// 9. ASSISTÊNCIA: BALANÇO HÍDRICO
+// ==========================================
+model FluidBalance {
+  id                String  @id @default(uuid())
+  tenantId          String
+  patientId         String
+  hospitalizationId String?
+  registeredById    String
+
+  dataHoraReferencia DateTime // Data/Turno referente ao balanço
+
+  // Totais consolidados automaticamente pelo Backend
+  totalInput  Float @default(0.0)
+  totalOutput Float @default(0.0)
+  balance     Float @default(0.0)
+
+  status      FluidBalanceStatus @default(EM_ANDAMENTO)
+  observacoes String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  registeredBy    User             @relation(fields: [registeredById], references: [id])
+
+  entries FluidEntry[]
+  outputs FluidOutput[]
+
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, patientId, dataHoraReferencia])
+}
+
+model FluidEntry {
+  id             String @id @default(uuid())
+  tenantId       String
+  fluidBalanceId String
+  registeredById String
+
+  dataHora  DateTime       @default(now())
+  tipo      FluidEntryType
+  volumeMl  Float
+  descricao String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  fluidBalance FluidBalance @relation(fields: [fluidBalanceId], references: [id], onDelete: Cascade)
+  registeredBy User         @relation(fields: [registeredById], references: [id])
+
+  @@index([tenantId, fluidBalanceId])
+}
+
+model FluidOutput {
+  id             String @id @default(uuid())
+  tenantId       String
+  fluidBalanceId String
+  registeredById String
+
+  dataHora  DateTime        @default(now())
+  tipo      FluidOutputType
+  volumeMl  Float
+  descricao String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  fluidBalance FluidBalance @relation(fields: [fluidBalanceId], references: [id], onDelete: Cascade)
+  registeredBy User         @relation(fields: [registeredById], references: [id])
+
+  @@index([tenantId, fluidBalanceId])
+}
+
+// ==========================================
+// 10. ASSISTÊNCIA: ESCALAS DE RISCO
+// ==========================================
+model BradenAssessment {
+  id                String  @id @default(uuid())
+  tenantId          String
+  patientId         String
+  hospitalizationId String?
+  registeredById    String
+
+  dataHora DateTime @default(now())
+
+  // Componentes da Escala (1 a 4)
+  sensoryPerception Int
+  moisture          Int
+  activity          Int
+  mobility          Int
+  nutrition         Int
+  frictionShear     Int // 1 a 3
+
+  // Calculado pelo backend
+  totalScore    Int
+  classificacao String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  registeredBy    User             @relation(fields: [registeredById], references: [id])
+
+  @@index([tenantId, patientId, dataHora])
+}
+
+model MorseAssessment {
+  id                String  @id @default(uuid())
+  tenantId          String
+  patientId         String
+  hospitalizationId String?
+  registeredById    String
+
+  dataHora DateTime @default(now())
+
+  // Componentes da Escala de Quedas
+  historyOfFalling   Int
+  secondaryDiagnosis Int
+  ambulatoryAid      Int
+  ivTherapy          Int
+  gait               Int
+  mentalStatus       Int
+
+  // Calculado pelo backend
+  totalScore    Int
+  classificacao String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  registeredBy    User             @relation(fields: [registeredById], references: [id])
+
+  @@index([tenantId, patientId, dataHora])
+}
+
+model GlasgowAssessment {
+  id                String  @id @default(uuid())
+  tenantId          String
+  patientId         String
+  hospitalizationId String?
+  registeredById    String
+
+  dataHora DateTime @default(now())
+
+  // Componentes Escala de Coma de Glasgow
+  eyeOpening      Int // 1 a 4
+  verbalResponse  Int // 1 a 5
+  motorResponse   Int // 1 a 6
+  pupilReactivity Int? // Opcional (atualização recente da escala)
+
+  // Calculado pelo backend
+  totalScore    Int
+  classificacao String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  registeredBy    User             @relation(fields: [registeredById], references: [id])
+
+  @@index([tenantId, patientId, dataHora])
+}
+
+// ==========================================
+// 11. FARMÁCIA: ESTOQUE E LOTES
+// ==========================================
+model MedicationStock {
+  id           String   @id @default(uuid())
+  tenantId     String
+  medicationId String
+  lote         String
+  validade     DateTime
+  quantidade   Float
+  localizacao  String // ex: "Farmácia Central", "Farmácia UTI"
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  medication Medication @relation(fields: [medicationId], references: [id])
+
+  dispensationItems DispensationItem[]
+  controlledLogs    ControlledMedicationLog[]
+
+  @@unique([medicationId, lote, localizacao, tenantId])
+  @@index([tenantId, medicationId])
+  @@index([tenantId, validade])
+}
+
+// ==========================================
+// 12. FARMÁCIA: DISPENSAÇÃO
+// ==========================================
+model MedicationDispensation {
+  id             String  @id @default(uuid())
+  tenantId       String
+  prescriptionId String
+  farmaceuticoId String? // Profissional que validou/dispensou
+
+  status           DispensationStatus @default(PENDENTE)
+  dataHoraDispensa DateTime?
+  observacoes      String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  farmaceutico User?        @relation(fields: [farmaceuticoId], references: [id])
+
+  items DispensationItem[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, prescriptionId])
+}
+
+model DispensationItem {
+  id                   String @id @default(uuid())
+  dispensationId       String
+  prescriptionItemId   String
+  stockId              String // Garante rastreabilidade do lote dispensado
+  quantidadeDispensada Float
+
+  dispensation     MedicationDispensation @relation(fields: [dispensationId], references: [id], onDelete: Cascade)
+  prescriptionItem PrescriptionItem       @relation(fields: [prescriptionItemId], references: [id])
+  stock            MedicationStock        @relation(fields: [stockId], references: [id])
+
+  @@index([dispensationId])
+  @@index([prescriptionItemId])
+}
+
+// ==========================================
+// 13. FARMÁCIA: PSICOTRÓPICOS E CONTROLADOS
+// ==========================================
+model ControlledMedicationLog {
+  id            String  @id @default(uuid())
+  tenantId      String
+  medicationId  String
+  stockId       String?
+  pacienteId    String?
+  responsavelId String
+
+  tipoOperacao  ControlledOperation
+  quantidade    Float
+  justificativa String
+  dataHora      DateTime            @default(now())
+
+  createdAt DateTime @default(now())
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  medication  Medication       @relation(fields: [medicationId], references: [id])
+  stock       MedicationStock? @relation(fields: [stockId], references: [id])
+  paciente    Patient?         @relation(fields: [pacienteId], references: [id])
+  responsavel User             @relation(fields: [responsavelId], references: [id])
+
+  @@index([tenantId, medicationId])
+  @@index([tenantId, dataHora])
+}
+
+// ==========================================
+// 14. FARMÁCIA: INTERAÇÕES MEDICAMENTOSAS
+// ==========================================
+model DrugInteraction {
+  id             String              @id @default(uuid())
+  tenantId       String
+  medicationAId  String
+  medicationBId  String
+  grauSeveridade InteractionSeverity
+  descricao      String
+  manejoClinico  String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+  medicationA Medication @relation("InteractionMedA", fields: [medicationAId], references: [id])
+  medicationB Medication @relation("InteractionMedB", fields: [medicationBId], references: [id])
+
+  @@unique([medicationAId, medicationBId, tenantId])
+  @@index([tenantId])
+}
+
+// ==========================================
+// 15. FARMÁCIA: KARDEX (Histórico)
+// ==========================================
+model MedicationKardex {
+  id              String @id @default(uuid())
+  tenantId        String
+  patientId       String
+  medicalRecordId String
+  medicationId    String
+  responsavelId   String
+
+  acao     KardexAction
+  detalhes String
+  dataHora DateTime     @default(now())
+
+  createdAt DateTime @default(now())
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id])
+  medication    Medication    @relation(fields: [medicationId], references: [id])
+  responsavel   User          @relation(fields: [responsavelId], references: [id])
+
+  @@index([tenantId, patientId, dataHora])
+  @@index([tenantId, medicalRecordId])
 }
