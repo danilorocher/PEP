@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Typography, Tag, message, Dropdown, MenuProps } from 'antd';
 import { EyeOutlined, DownOutlined, CheckCircleOutlined, CloseCircleOutlined, DollarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -10,7 +10,7 @@ const { Title, Text } = Typography;
 
 export const BillingListPage = () => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState({});
   const [itemsModal, setItemsModal] = useState({ visible: false, guide: null });
@@ -25,7 +25,7 @@ export const BillingListPage = () => {
           ...currentFilters,
         },
       }).catch(err => {
-        console.error('Aviso: Rota de faturamento falhou ou não existe', err.message);
+        console.error('Aviso: Rota de faturamento falhou ou nÃ£o existe', err.message);
         return { data: { data: [], total: 0 } }; // Fallback seguro
       });
 
@@ -84,24 +84,24 @@ export const BillingListPage = () => {
 
   const columns = [
     {
-      title: 'Data Emissão',
+      title: 'Data EmissÃ£o',
       dataIndex: 'dataEmissao',
       key: 'dataEmissao',
       render: (val: string) => val ? dayjs(val).format('DD/MM/YYYY') : '---',
     },
     {
-      title: 'Nº Guia',
+      title: 'NÂº Guia',
       dataIndex: 'numeroGuia',
       key: 'numeroGuia',
       render: (val: string) => <Text strong>{val || 'N/A'}</Text>,
     },
     {
-      title: 'Paciente / Convênio',
+      title: 'Paciente / ConvÃªnio',
       key: 'patientInfo',
       render: (record: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{record.patient?.nomeCompleto || 'Paciente não informado'}</Text>
-          <Text type="secondary" size="small">{record.insurance?.nome || 'Particular'}</Text>
+          <Text strong>{record.patient?.nomeCompleto || 'Paciente nÃ£o informado'}</Text>
+          <Text type="secondary" style={{ fontSize: "12px" }}>{record.insurance?.nome || 'Particular'}</Text>
         </Space>
       ),
     },
@@ -118,7 +118,7 @@ export const BillingListPage = () => {
       render: (val: string) => <Tag color={getStatusColor(val)}>{val || 'RASCUNHO'}</Tag>,
     },
     {
-      title: 'Ações',
+      title: 'AÃ§Ãµes',
       key: 'actions',
       render: (record: any) => {
         const items: MenuProps['items'] = [
@@ -132,16 +132,16 @@ export const BillingListPage = () => {
         return (
           <Space>
             <Button 
-              size="small" 
+              style={{ fontSize: "12px" }} 
               icon={<EyeOutlined />} 
               onClick={() => setItemsModal({ visible: true, guide: record })}
             >
               Ver Itens
             </Button>
             
-            {/* Tag Can removida - Botão de Status Liberado */}
+            {/* Tag Can removida - BotÃ£o de Status Liberado */}
             <Dropdown menu={{ items, onClick: (e) => updateStatus(record.id, e.key) }}>
-              <Button size="small">
+              <Button style={{ fontSize: "12px" }}>
                 Status <DownOutlined />
               </Button>
             </Dropdown>

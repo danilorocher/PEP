@@ -1,4 +1,4 @@
-import { Card, Col, Row, Statistic, Typography } from 'antd';
+﻿import { Card, Col, Row, Statistic, Typography } from 'antd';
 import { 
   MedicineBoxOutlined, 
   CalendarOutlined, 
@@ -26,7 +26,7 @@ export const DashboardStats = ({
       <Col xs={24} sm={12} lg={6}>
         <Card bordered={false} hoverable>
           <Statistic
-            title="Internações Ativas"
+            title="InternaÃ§Ãµes Ativas"
             value={hospitalizations}
             prefix={<MedicineBoxOutlined style={{ color: '#1890ff' }} />}
           />
@@ -44,12 +44,12 @@ export const DashboardStats = ({
       <Col xs={24} sm={12} lg={6}>
         <Card bordered={false} hoverable>
           <Statistic
-            title="Medicações Atrasadas"
+            title="MedicaÃ§Ãµes Atrasadas"
             value={overdueMedications}
             valueStyle={{ color: overdueMedications > 0 ? '#ff4d4f' : 'inherit' }}
             prefix={<AlertOutlined style={{ color: overdueMedications > 0 ? '#ff4d4f' : '#faad14' }} />}
           />
-          {overdueMedications > 0 && <Text type="danger" size="small">Ação imediata necessária</Text>}
+          {overdueMedications > 0 && <Text type="danger" style={{ fontSize: "12px" }}>AÃ§Ã£o imediata necessÃ¡ria</Text>}
         </Card>
       </Col>
       <Col xs={24} sm={12} lg={6}>

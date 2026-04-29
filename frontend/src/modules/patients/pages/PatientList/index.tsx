@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Typography, Tag, message, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SolutionOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +10,7 @@ const { Title } = Typography;
 export const PatientListPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState({});
 
@@ -57,7 +57,7 @@ export const PatientListPage = () => {
   const handleDelete = (id: string) => {
     Modal.confirm({
       title: 'Excluir Paciente',
-      content: 'Tem certeza que deseja inativar este paciente? Esta ação não pode ser desfeita se houver internações ativas.',
+      content: 'Tem certeza que deseja inativar este paciente? Esta aÃ§Ã£o nÃ£o pode ser desfeita se houver internaÃ§Ãµes ativas.',
       okText: 'Confirmar',
       okType: 'danger',
       cancelText: 'Cancelar',
@@ -81,15 +81,15 @@ export const PatientListPage = () => {
       render: (text: string, record: any) => (
         <Space direction="vertical" size={0}>
           <span style={{ fontWeight: 'bold' }}>{text}</span>
-          <small style={{ color: '#8c8c8c' }}>CPF: {record.cpf || 'Não informado'}</small>
+          <small style={{ color: '#8c8c8c' }}>CPF: {record.cpf || 'NÃ£o informado'}</small>
         </Space>
       ),
     },
     {
-      title: 'Convênio',
+      title: 'ConvÃªnio',
       dataIndex: 'convenioId',
       key: 'convenioId',
-      render: (id: string) => id ? <Tag color="blue">Particular/Convênio</Tag> : <Tag color="green">SUS</Tag>,
+      render: (id: string) => id ? <Tag color="blue">Particular/ConvÃªnio</Tag> : <Tag color="green">SUS</Tag>,
     },
     {
       title: 'Status',
@@ -101,7 +101,7 @@ export const PatientListPage = () => {
       },
     },
     {
-      title: 'Ações',
+      title: 'AÃ§Ãµes',
       key: 'actions',
       render: (_: any, record: any) => (
         <Space>
@@ -109,9 +109,9 @@ export const PatientListPage = () => {
             size="small" 
             icon={<SolutionOutlined />} 
             onClick={() => navigate(`/medical-records/${record.id}`)}
-            title="Acessar Prontuário"
+            title="Acessar ProntuÃ¡rio"
           />
-          {/* Botões liberados das tags Can */}
+          {/* BotÃµes liberados das tags Can */}
           <Button 
             size="small" 
             icon={<EditOutlined />} 
@@ -131,8 +131,8 @@ export const PatientListPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>Gestão de Pacientes</Title>
-        {/* Botão Novo Paciente liberado */}
+        <Title level={2} style={{ margin: 0 }}>GestÃ£o de Pacientes</Title>
+        {/* BotÃ£o Novo Paciente liberado */}
         <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/patients/new')}>
           Novo Paciente
         </Button>

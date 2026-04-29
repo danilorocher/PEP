@@ -1,4 +1,4 @@
-import { Layout, Button, Space, Typography, Avatar, Dropdown, theme } from 'antd';
+﻿import { Layout, Button, Space, Typography, Avatar, Dropdown, theme } from 'antd';
 import { UserOutlined, LogoutOutlined, BellOutlined, GlobalOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useTenantStore } from '../../../store/useTenantStore';
@@ -47,14 +47,14 @@ export const Header = () => {
         <Text strong style={{ color: token.colorPrimary }}>UNIDADE: {subdomain.toUpperCase()}</Text>
       </Space>
 
-      <Space size="large">
+      <Space style={{ fontSize: "16px" }}>
         <Button type="text" icon={<BellOutlined />} />
         
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
           <Space style={{ cursor: 'pointer' }}>
             <div style={{ textAlign: 'right', lineHeight: '1.2' }}>
               <div style={{ fontWeight: 'bold' }}>{user?.name}</div>
-              <Text type="secondary" size="small">{user?.role}</Text>
+              <Text type="secondary" style={{ fontSize: "12px" }}>{user?.role}</Text>
             </div>
             <Avatar icon={<UserOutlined />} style={{ backgroundColor: token.colorPrimary }} />
           </Space>

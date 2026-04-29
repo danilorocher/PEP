@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Typography, Tag, message, Card, Select, DatePicker } from 'antd';
 import { CheckSquareOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -9,7 +9,7 @@ const { Title, Text } = Typography;
 
 export const MedicationListPage = () => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
   const [statusFilter, setStatusFilter] = useState('NAO_MINISTRADO');
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -28,8 +28,8 @@ export const MedicationListPage = () => {
           dataFinal: date.endOf('day').toISOString()
         },
       }).catch(err => {
-        console.error('Aviso: Rota de medicações falhou ou está vazia', err.message);
-        return { data: { data: [], total: 0 } }; // Fallback seguro para não quebrar a tela
+        console.error('Aviso: Rota de medicaÃ§Ãµes falhou ou estÃ¡ vazia', err.message);
+        return { data: { data: [], total: 0 } }; // Fallback seguro para nÃ£o quebrar a tela
       });
 
       // Lida com diferentes formatos de resposta (objeto paginado ou array direto)
@@ -40,7 +40,7 @@ export const MedicationListPage = () => {
       setPagination({ current: page, pageSize, total: totalCount });
     } catch (error) {
       console.error(error);
-      message.error('Erro ao carregar lista de medicações');
+      message.error('Erro ao carregar lista de medicaÃ§Ãµes');
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ export const MedicationListPage = () => {
 
   const columns = [
     {
-      title: 'Horário',
+      title: 'HorÃ¡rio',
       dataIndex: 'dataHoraProgamada',
       key: 'dataHoraProgamada',
       render: (val: string, record: any) => {
@@ -75,20 +75,20 @@ export const MedicationListPage = () => {
       key: 'patient',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.hospitalization?.patient?.nomeCompleto || 'Paciente não informado'}</Text>
-          <Text type="secondary" size="small">
-            {rec.hospitalization?.ward?.nome || 'Ala não informada'} - Leito {rec.hospitalization?.bed?.numero || 'N/A'}
+          <Text strong>{rec.hospitalization?.patient?.nomeCompleto || 'Paciente nÃ£o informado'}</Text>
+          <Text type="secondary" style={{ fontSize: "12px" }}>
+            {rec.hospitalization?.ward?.nome || 'Ala nÃ£o informada'} - Leito {rec.hospitalization?.bed?.numero || 'N/A'}
           </Text>
         </Space>
       )
     },
     {
-      title: 'Prescrição',
+      title: 'PrescriÃ§Ã£o',
       key: 'prescription',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.prescriptionItem?.medication?.nome || 'Medicação não especificada'}</Text>
-          <Text type="secondary" size="small">
+          <Text strong>{rec.prescriptionItem?.medication?.nome || 'MedicaÃ§Ã£o nÃ£o especificada'}</Text>
+          <Text type="secondary" style={{ fontSize: "12px" }}>
             {rec.prescriptionItem?.dosagem || '-'} - {rec.prescriptionItem?.viaAdministracao || '-'}
           </Text>
         </Space>
@@ -108,15 +108,15 @@ export const MedicationListPage = () => {
       }
     },
     {
-      title: 'Ações',
+      title: 'AÃ§Ãµes',
       key: 'actions',
       render: (rec: any) => (
         <Space>
           {rec.status === 'NAO_MINISTRADO' && (
-            // Botão liberado do componente Can
+            // BotÃ£o liberado do componente Can
             <Button 
               type="primary" 
-              size="small" 
+              style={{ fontSize: "12px" }} 
               icon={<CheckSquareOutlined />} 
               onClick={() => setAdministerModal({ visible: true, data: rec })}
             >
@@ -131,7 +131,7 @@ export const MedicationListPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-        <Title level={2}>Administração de Medicamentos (Enfermagem)</Title>
+        <Title level={2}>AdministraÃ§Ã£o de Medicamentos (Enfermagem)</Title>
         <Space>
           <Button icon={<ReloadOutlined />} onClick={() => fetchAdministrations(pagination.current, pagination.pageSize, statusFilter, selectedDate)}>
             Atualizar
@@ -140,7 +140,7 @@ export const MedicationListPage = () => {
       </div>
 
       <Card style={{ marginBottom: 16 }}>
-        <Space size="large" wrap>
+        <Space style={{ fontSize: "16px" }} wrap>
           <div>
             <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Data</Text>
             <DatePicker 

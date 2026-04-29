@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Typography, Tag, message, Card, Select, DatePicker, Tooltip } from 'antd';
 import { PlusOutlined, ReloadOutlined, FileSearchOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -8,7 +8,7 @@ const { Title, Text } = Typography;
 
 export const ExamListPage = () => {
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -25,7 +25,7 @@ export const ExamListPage = () => {
           dataFinal: date.endOf('day').toISOString()
         },
       }).catch(err => {
-        console.error('Aviso: Rota de exames falhou ou ainda não existe:', err.message);
+        console.error('Aviso: Rota de exames falhou ou ainda nÃ£o existe:', err.message);
         return { data: { data: [], total: 0 } }; // Fallback seguro
       });
 
@@ -50,7 +50,7 @@ export const ExamListPage = () => {
     const configs: any = {
       SOLICITADO: { color: 'blue', text: 'SOLICITADO', icon: <ClockCircleOutlined /> },
       COLETADO: { color: 'orange', text: 'COLETADO', icon: <ClockCircleOutlined /> },
-      EM_ANALISE: { color: 'processing', text: 'EM ANÁLISE', icon: <ReloadOutlined spin /> },
+      EM_ANALISE: { color: 'processing', text: 'EM ANÃLISE', icon: <ReloadOutlined spin /> },
       LAUDO_LIBERADO: { color: 'success', text: 'LAUDO LIBERADO', icon: <CheckCircleOutlined /> },
       CANCELADO: { color: 'error', text: 'CANCELADO', icon: <PlusOutlined style={{ rotate: '45deg' }} /> },
     };
@@ -71,7 +71,7 @@ export const ExamListPage = () => {
       key: 'patient',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.patient?.nomeCompleto || 'Paciente não identificado'}</Text>
+          <Text strong>{rec.patient?.nomeCompleto || 'Paciente nÃ£o identificado'}</Text>
           <Text type="secondary" style={{ fontSize: '12px' }}>CPF: {rec.patient?.cpf || '---'}</Text>
         </Space>
       )
@@ -81,8 +81,8 @@ export const ExamListPage = () => {
       key: 'exam',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.procedimentoNome || rec.exameNome || 'Procedimento não especificado'}</Text>
-          <Text type="secondary" style={{ fontSize: '12px' }}>Solicitado por: {rec.solicitanteNome || 'Médico da Unidade'}</Text>
+          <Text strong>{rec.procedimentoNome || rec.exameNome || 'Procedimento nÃ£o especificado'}</Text>
+          <Text type="secondary" style={{ fontSize: '12px' }}>Solicitado por: {rec.solicitanteNome || 'MÃ©dico da Unidade'}</Text>
         </Space>
       )
     },
@@ -93,12 +93,12 @@ export const ExamListPage = () => {
       render: (val: string) => getStatusTag(val)
     },
     {
-      title: 'Ações',
+      title: 'AÃ§Ãµes',
       key: 'actions',
       render: (rec: any) => (
         <Space>
           <Tooltip title="Ver Detalhes/Laudo">
-            <Button size="small" icon={<FileSearchOutlined />} onClick={() => message.info('Visualização de laudo em desenvolvimento')} />
+            <Button size="small" icon={<FileSearchOutlined />} onClick={() => message.info('VisualizaÃ§Ã£o de laudo em desenvolvimento')} />
           </Tooltip>
           {rec.status === 'LAUDO_LIBERADO' && (
             <Button size="small" type="primary" ghost>Imprimir</Button>
@@ -112,15 +112,15 @@ export const ExamListPage = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
         <Title level={2}>Central de Exames</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => message.warning('A solicitação deve ser feita via Prontuário do Paciente')}>
-          Nova Solicitação
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => message.warning('A solicitaÃ§Ã£o deve ser feita via ProntuÃ¡rio do Paciente')}>
+          Nova SolicitaÃ§Ã£o
         </Button>
       </div>
 
       <Card style={{ marginBottom: 16 }}>
         <Space size="large" wrap>
           <div>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Período de Solicitação</Text>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>PerÃ­odo de SolicitaÃ§Ã£o</Text>
             <DatePicker 
               value={selectedDate} 
               onChange={(date) => setSelectedDate(date || dayjs())} 
@@ -138,7 +138,7 @@ export const ExamListPage = () => {
                 { value: '', label: 'Todos os Status' },
                 { value: 'SOLICITADO', label: 'Solicitados' },
                 { value: 'COLETADO', label: 'Coletados' },
-                { value: 'EM_ANALISE', label: 'Em Análise' },
+                { value: 'EM_ANALISE', label: 'Em AnÃ¡lise' },
                 { value: 'LAUDO_LIBERADO', label: 'Laudo Liberado' },
               ]}
             />

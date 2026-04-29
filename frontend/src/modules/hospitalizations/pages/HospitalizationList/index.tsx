@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Typography, Tag, message, Card, Select } from 'antd';
 import { PlusOutlined, ExportOutlined, SolutionOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -29,7 +29,7 @@ export const HospitalizationListPage = () => {
       setData(response.data.data);
       setPagination({ current: page, pageSize, total: response.data.total });
     } catch (error) {
-      message.error('Erro ao carregar internações');
+      message.error('Erro ao carregar internaÃ§Ãµes');
     } finally {
       setLoading(false);
     }
@@ -50,17 +50,17 @@ export const HospitalizationListPage = () => {
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
           <Text strong>{rec.patient?.nomeCompleto}</Text>
-          <Text type="secondary" size="small">CPF: {rec.patient?.cpf}</Text>
+          <Text type="secondary" style={{ fontSize: "12px" }}>CPF: {rec.patient?.cpf}</Text>
         </Space>
       )
     },
     {
-      title: 'Localização',
+      title: 'LocalizaÃ§Ã£o',
       key: 'location',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
           <Text>{rec.ward?.nome}</Text>
-          <Text type="secondary" size="small">Leito {rec.bed?.numero} ({rec.tipoAcomodacao})</Text>
+          <Text type="secondary" style={{ fontSize: "12px" }}>Leito {rec.bed?.numero} ({rec.tipoAcomodacao})</Text>
         </Space>
       )
     },
@@ -71,7 +71,7 @@ export const HospitalizationListPage = () => {
       render: (val: string) => dayjs(val).format('DD/MM/YYYY HH:mm')
     },
     {
-      title: 'Médico Responsável',
+      title: 'MÃ©dico ResponsÃ¡vel',
       key: 'medico',
       render: (rec: any) => rec.medicoResponsavel?.nomeCompleto
     },
@@ -82,20 +82,20 @@ export const HospitalizationListPage = () => {
       render: (val: string) => <Tag color={val === 'ATIVA' ? 'blue' : val === 'ALTA' ? 'green' : 'default'}>{val}</Tag>
     },
     {
-      title: 'Ações',
+      title: 'AÃ§Ãµes',
       key: 'actions',
       render: (rec: any) => (
         <Space>
           <Button 
-            size="small" 
+            style={{ fontSize: "12px" }} 
             icon={<SolutionOutlined />} 
             onClick={() => navigate(`/medical-records/${rec.patientId}`)}
-            title="Acessar Prontuário"
+            title="Acessar ProntuÃ¡rio"
           />
           {rec.status === 'ATIVA' && (
             <Can module="internacao" action="alta">
               <Button 
-                size="small" 
+                style={{ fontSize: "12px" }} 
                 type="primary" 
                 danger
                 icon={<ExportOutlined />} 
@@ -114,7 +114,7 @@ export const HospitalizationListPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-        <Title level={2}>Gestão de Internações</Title>
+        <Title level={2}>GestÃ£o de InternaÃ§Ãµes</Title>
         <Space>
           <Select 
             value={statusFilter} 

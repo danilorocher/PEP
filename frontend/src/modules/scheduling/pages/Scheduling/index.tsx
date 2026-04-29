@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Card, Table, Tag, Button, Space, Typography, message, Modal, Calendar, Badge, Divider, List, Avatar } from 'antd';
 import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, PlayCircleOutlined, EditOutlined, UserDeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -9,7 +9,7 @@ const { Title, Text } = Typography;
 
 export const SchedulingPage = () => {
   const [loading, setLoading] = useState(false);
-  const [appointments, setAppointments] = useState([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [selectedDate, setSelectedDate] = useState(dayjs());
@@ -23,11 +23,11 @@ export const SchedulingPage = () => {
           dataFinal: selectedDate.endOf('day').toISOString()
         }
       }).catch(err => {
-        console.error('Rota de agendamentos falhou ou está vazia:', err.message);
+        console.error('Rota de agendamentos falhou ou estÃ¡ vazia:', err.message);
         return { data: { data: [] } }; // Fallback seguro
       });
       
-      // Lida tanto com paginação quanto com array direto do backend
+      // Lida tanto com paginaÃ§Ã£o quanto com array direto do backend
       const agendamentos = response.data?.data || response.data || [];
       setAppointments(Array.isArray(agendamentos) ? agendamentos : []);
     } catch (error) {
@@ -49,7 +49,7 @@ export const SchedulingPage = () => {
       fetchSchedule();
     } catch (error) {
       console.error(error);
-      message.error('Erro ao processar ação ou rota inexistente');
+      message.error('Erro ao processar aÃ§Ã£o ou rota inexistente');
     }
   };
 
@@ -79,7 +79,7 @@ export const SchedulingPage = () => {
       key: 'patient',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.patient?.nomeCompleto || 'Paciente não identificado'}</Text>
+          <Text strong>{rec.patient?.nomeCompleto || 'Paciente nÃ£o identificado'}</Text>
           <Text type="secondary" style={{ fontSize: '12px' }}>{rec.tipo || 'Consulta'}</Text>
         </Space>
       )
@@ -87,7 +87,7 @@ export const SchedulingPage = () => {
     {
       title: 'Profissional',
       key: 'doctor',
-      render: (rec: any) => rec.doctor?.nomeCompleto || 'Não atribuído'
+      render: (rec: any) => rec.doctor?.nomeCompleto || 'NÃ£o atribuÃ­do'
     },
     {
       title: 'Status',
@@ -96,7 +96,7 @@ export const SchedulingPage = () => {
       render: (val: string) => <Tag color={getStatusColor(val)}>{val || 'AGENDADO'}</Tag>
     },
     {
-      title: 'Ações',
+      title: 'AÃ§Ãµes',
       key: 'actions',
       render: (rec: any) => (
         <Space wrap>
@@ -105,7 +105,7 @@ export const SchedulingPage = () => {
             <Button size="small" icon={<CheckCircleOutlined />} onClick={() => handleAction(rec.id, 'confirm')}>Confirmar</Button>
           )}
           
-          {/* Confirmação e Recepção */}
+          {/* ConfirmaÃ§Ã£o e RecepÃ§Ã£o */}
           {rec.status === 'CONFIRMADO' && (
             <Button size="small" type="default" onClick={() => handleAction(rec.id, 'arrive')}>Chegou</Button>
           )}
@@ -115,13 +115,13 @@ export const SchedulingPage = () => {
             <Button size="small" type="primary" icon={<PlayCircleOutlined />} onClick={() => handleAction(rec.id, 'start')}>Atender</Button>
           )}
           
-          {/* Ações de Cancelamento / Falta (Disponíveis em status iniciais) */}
+          {/* AÃ§Ãµes de Cancelamento / Falta (DisponÃ­veis em status iniciais) */}
           {!['REALIZADO', 'CANCELADO', 'FALTOU'].includes(rec.status) && (
             <>
               <Button size="small" danger onClick={() => {
                   Modal.confirm({
                       title: 'Registrar Falta',
-                      content: 'Deseja registrar que o paciente faltou à consulta?',
+                      content: 'Deseja registrar que o paciente faltou Ã  consulta?',
                       onOk: () => handleAction(rec.id, 'miss')
                   });
               }}>Faltou</Button>
@@ -142,8 +142,8 @@ export const SchedulingPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-        <Title level={2}>Agendamento e Recepção</Title>
-        {/* Botão de Novo Agendamento liberado */}
+        <Title level={2}>Agendamento e RecepÃ§Ã£o</Title>
+        {/* BotÃ£o de Novo Agendamento liberado */}
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setSelectedAppt(null); setModalVisible(true); }}>
           Novo Agendamento
         </Button>

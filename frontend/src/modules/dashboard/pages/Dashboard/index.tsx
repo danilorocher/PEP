@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Typography, Spin, message, Row, Col, List, Badge, Card, Tag, Avatar } from 'antd';
 import { UserOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import api from '../../../../shared/services/api';
@@ -51,7 +51,7 @@ export const DashboardPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // 🧠 Filtros Inteligentes para separar quem chegou de quem ainda vai chegar
+  // ðŸ§  Filtros Inteligentes para separar quem chegou de quem ainda vai chegar
   const salaDeEspera = (data.appointments || []).filter((item: any) => item.status === 'AGUARDANDO_ATENDIMENTO');
   const proximosAgendamentos = (data.appointments || []).filter((item: any) => !item.status || item.status === 'AGENDADO' || item.status === 'CONFIRMADO');
 
@@ -90,22 +90,22 @@ export const DashboardPage = () => {
                 <List.Item>
                   <List.Item.Meta
                     avatar={<Avatar style={{ backgroundColor: '#fff0f6', color: '#eb2f96' }} icon={<UserOutlined />} />}
-                    title={item.patient?.nomeCompleto || 'Paciente não identificado'}
+                    title={item.patient?.nomeCompleto || 'Paciente nÃ£o identificado'}
                     description={
                       <>
-                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                          Aguardando: {item.doctor?.nomeCompleto || 'Médico'}
-                        </Text>
+                        <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
+                          Aguardando: {item.doctor?.nomeCompleto || 'MÃ©dico'}
+                        </Typography.Text>
                       </>
                     }
                   />
-                  <Tag color="magenta">Recepção</Tag>
+                  <Tag color="magenta">RecepÃ§Ã£o</Tag>
                 </List.Item>
               )}
             />
           </Card>
 
-          {/* 2. Card de Próximos Agendamentos */}
+          {/* 2. Card de PrÃ³ximos Agendamentos */}
           <Card 
             title={<><ClockCircleOutlined style={{ color: '#1890ff' }} /> Previstos para Hoje</>} 
             bordered={false}
@@ -117,7 +117,7 @@ export const DashboardPage = () => {
               renderItem={(item: any) => (
                 <List.Item>
                   <List.Item.Meta
-                    title={item.patient?.nomeCompleto || 'Paciente não identificado'}
+                    title={item.patient?.nomeCompleto || 'Paciente nÃ£o identificado'}
                     description={
                       <>
                         <Badge status="processing" text={dayjs(item.dataHora).format('HH:mm')} />

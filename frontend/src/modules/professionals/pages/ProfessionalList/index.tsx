@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { Table, Button, Space, Typography, Tag, message, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +9,7 @@ const { Title, Text } = Typography;
 export const ProfessionalListPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
   const fetchProfessionals = useCallback(async (page = 1, pageSize = 10) => {
@@ -18,7 +18,7 @@ export const ProfessionalListPage = () => {
       const response = await api.get('/professionals', {
         params: { page, limit: pageSize },
       }).catch(err => {
-        console.error('Aviso: Rota de profissionais falhou ou não existe', err.message);
+        console.error('Aviso: Rota de profissionais falhou ou nÃ£o existe', err.message);
         return { data: { data: [], total: 0 } }; // Shield contra tela branca
       });
 
@@ -75,13 +75,13 @@ export const ProfessionalListPage = () => {
       key: 'nome',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.nomeCompleto || 'Nome não informado'}</Text>
+          <Text strong>{rec.nomeCompleto || 'Nome nÃ£o informado'}</Text>
           <Text type="secondary" style={{ fontSize: '12px' }}>CPF: {rec.cpf || '---'}</Text>
         </Space>
       ),
     },
     {
-      title: 'Cargo / Função',
+      title: 'Cargo / FunÃ§Ã£o',
       dataIndex: 'tipo',
       key: 'tipo',
       render: (val: string) => <Tag color={getRoleColor(val)}>{val ? val.replace('_', ' ') : 'N/A'}</Tag>,
@@ -103,7 +103,7 @@ export const ProfessionalListPage = () => {
       render: (val: string) => <Tag color={val === 'INATIVO' ? 'error' : 'success'}>{val || 'ATIVO'}</Tag>,
     },
     {
-      title: 'Ações',
+      title: 'AÃ§Ãµes',
       key: 'actions',
       render: (rec: any) => (
         <Space>
@@ -126,9 +126,9 @@ export const ProfessionalListPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>Gestão de Equipe</Title>
+        <Title level={2} style={{ margin: 0 }}>GestÃ£o de Equipe</Title>
         
-        {/* Botão Unificado apontando para a nova rota! */}
+        {/* BotÃ£o Unificado apontando para a nova rota! */}
         <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/professionals/new')}>
           Novo Colaborador
         </Button>

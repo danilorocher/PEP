@@ -1,32 +1,32 @@
-import { useAuthStore } from '../../store/useAuthStore';
+﻿import React from 'react';
+import { useAuthStore, User } from '../../store/useAuthStore';
 
-/**
- * Hook para verificar permissões RBAC
- * Exemplo: const canCreate = usePermission('pacientes', 'criar');
- */
+type PermissionsMap = Record<string, Record<string, boolean>>;
+
+function getRoleName(user: User | null): string {
+  if (!user) return '';
+  if (user.roleName) return user.roleName;
+  if (typeof user.role === 'string') return user.role;
+  if (typeof user.role === 'object' && user.role?.nome) return user.role.nome;
+  return '';
+}
+
+function getPermissions(user: User | null, storePermissions: PermissionsMap): PermissionsMap {
+  if (storePermissions && Object.keys(storePermissions).length > 0) return storePermissions;
+  if (user?.permissoes) return user.permissoes;
+  if (typeof user?.role === 'object' && user.role?.permissoes) return user.role.permissoes;
+  return {};
+}
+
 export const usePermission = (module: string, action: string): boolean => {
   const { permissions, user } = useAuthStore();
-
-  // 1. Admin sempre tem permissão total (Cobre as várias formas que o backend pode enviar a role)
-  const isAdmin = user?.roleName === 'ADMIN' || user?.role === 'ADMIN' || user?.role?.nome === 'ADMIN';
-  if (isAdmin) return true;
-
-  // 2. Busca as permissões de forma segura (da store ou de dentro do perfil do usuário)
-  const safePermissions = permissions || user?.role?.permissoes || user?.permissoes || {};
-
-  // 3. Pega as permissões do módulo solicitado
+  if (getRoleName(user) === 'ADMIN') return true;
+  const safePermissions = getPermissions(user, permissions);
   const modulePermissions = safePermissions[module];
-  
-  // Se o módulo não existir nas permissões, bloqueia
   if (!modulePermissions) return false;
-
-  // 4. Retorna verdadeiro se a ação (criar, visualizar, etc) estiver como true
   return !!modulePermissions[action];
 };
 
-/**
- * Componente utilitário para envolver elementos que exigem permissão
- */
 interface CanProps {
   module: string;
   action: string;
