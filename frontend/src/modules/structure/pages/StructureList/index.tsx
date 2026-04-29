@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
-import { Table, Button, message, message, Space, Typography, Tag, Card, Tabs, Modal, Form, Input, Select, Badge, Row, Col, Statistic, Tooltip } from 'antd';
-import { PlusOutlined, ApartmentOutlined, LayoutOutlined, MedicineBoxOutlined, ToolOutlined, RestOutlined } from '@ant-design/icons';
+import { Table, Button, message, Space, Typography, Tag, Card, Tabs, Modal, Form, Input, Select, Badge, Row, Col, Statistic, Tooltip } from 'antd';
+import { PlusOutlined, ApartmentOutlined, LayoutOutlined, MedicineBoxOutlined, ToolOutlined, RestOutlined, CheckCircleOutlined, UserOutlined } from '@ant-design/icons';
 import api from '../../../../shared/services/api';
 
 const { Title, Text } = Typography;
@@ -8,8 +8,8 @@ const { Option } = Select;
 
 export const StructureListPage = () => {
   const [loading, setLoading] = useState(false);
-  const [wards, setWards] = useState<any[]>([]); // Alas
-  const [beds, setBeds] = useState<any[]>([]);   // Leitos
+  const [wards, setWards] = useState([]); // Alas
+  const [beds, setBeds] = useState([]);   // Leitos
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('1');
 
@@ -35,7 +35,7 @@ export const StructureListPage = () => {
     fetchStructure();
   }, [fetchStructure]);
 
-  // ConfiguraÃ§Ã£o das Colunas de Alas
+  // Configuração das Colunas de Alas
   const wardColumns = [
     {
       title: 'Nome da Ala / Setor',
@@ -47,7 +47,7 @@ export const StructureListPage = () => {
       title: 'Tipo',
       dataIndex: 'tipo',
       key: 'tipo',
-      render: (tipo: string) => <Tag color="blue">{tipo || 'INTERNAÃ‡ÃƒO'}</Tag>
+      render: (tipo: string) => <Tag color="blue">{tipo || 'INTERNAÇÃO'}</Tag>
     },
     {
       title: 'Capacidade',
@@ -61,13 +61,13 @@ export const StructureListPage = () => {
       render: (status: string) => <Badge status={status === 'INATIVO' ? 'error' : 'success'} text={status || 'ATIVO'} />
     },
     {
-      title: 'AÃ§Ãµes',
+      title: 'Ações',
       key: 'actions',
       render: () => <Button size="small">Editar</Button>
     }
   ];
 
-  // ConfiguraÃ§Ã£o das Colunas de Leitos (O "Mapa de Leitos")
+  // Configuração das Colunas de Leitos (O "Mapa de Leitos")
   const bedColumns = [
     {
       title: 'Leito',
@@ -88,8 +88,8 @@ export const StructureListPage = () => {
         const colors: any = {
           DISPONIVEL: { color: 'green', label: 'Livre', icon: <CheckCircleOutlined /> },
           OCUPADO: { color: 'red', label: 'Ocupado', icon: <UserOutlined /> },
-          LIMPEZA: { color: 'orange', label: 'HigienizaÃ§Ã£o', icon: <RestOutlined /> },
-          MANUTENCAO: { color: 'volcano', label: 'ManutenÃ§Ã£o', icon: <ToolOutlined /> },
+          LIMPEZA: { color: 'orange', label: 'Higienização', icon: <RestOutlined /> },
+          MANUTENCAO: { color: 'volcano', label: 'Manutenção', icon: <ToolOutlined /> },
         };
         const config = colors[status] || { color: 'default', label: status };
         return <Tag color={config.color}>{config.label}</Tag>;
@@ -102,11 +102,11 @@ export const StructureListPage = () => {
       render: (val: string) => <Tag>{val || 'ENFERMARIA'}</Tag>
     },
     {
-      title: 'AÃ§Ãµes',
+      title: 'Ações',
       key: 'actions',
       render: () => (
         <Space>
-           <Tooltip title="Mudar Status (Limpeza/ManutenÃ§Ã£o)">
+           <Tooltip title="Mudar Status (Limpeza/Manutenção)">
             <Button size="small" icon={<ToolOutlined />} />
           </Tooltip>
           <Button size="small">Editar</Button>
@@ -124,7 +124,7 @@ export const StructureListPage = () => {
         </Button>
       </div>
 
-      {/* Cards de Resumo RÃ¡pido */}
+      {/* Cards de Resumo Rápido */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card bordered={false}>
@@ -133,17 +133,17 @@ export const StructureListPage = () => {
         </Col>
         <Col span={6}>
           <Card bordered={false}>
-            <Statistic title="Leitos Livres" value={beds.filter(b => b.status === 'DISPONIVEL').length} valueStyle={{ color: '#3f8600' }} />
+            <Statistic title="Leitos Livres" value={beds.filter((b: any) => b.status === 'DISPONIVEL').length} valueStyle={{ color: '#3f8600' }} />
           </Card>
         </Col>
         <Col span={6}>
           <Card bordered={false}>
-            <Statistic title="Em HigienizaÃ§Ã£o" value={beds.filter(b => b.status === 'LIMPEZA').length} valueStyle={{ color: '#fa8c16' }} />
+            <Statistic title="Em Higienização" value={beds.filter((b: any) => b.status === 'LIMPEZA').length} valueStyle={{ color: '#fa8c16' }} />
           </Card>
         </Col>
         <Col span={6}>
           <Card bordered={false}>
-            <Statistic title="Taxa de OcupaÃ§Ã£o" value="78" suffix="%" />
+            <Statistic title="Taxa de Ocupação" value="78%" suffix="%" />
           </Card>
         </Col>
       </Row>
@@ -171,7 +171,7 @@ export const StructureListPage = () => {
         </Tabs>
       </Card>
 
-      {/* Modal Simples de Cadastro (Exemplo) */}
+      {/* Modal Simples de Cadastro */}
       <Modal 
         title={activeTab === '1' ? "Cadastrar Nova Ala" : "Cadastrar Novo Leito"} 
         open={isModalVisible} 
@@ -179,13 +179,13 @@ export const StructureListPage = () => {
         footer={null}
       >
         <Form layout="vertical" onFinish={() => { message.success('Salvo com sucesso'); setIsModalVisible(false); }}>
-          <Form.Item label="Nome / NÃºmero" name="nome" rules={[{ required: true }]}>
+          <Form.Item label="Nome / Número" name="nome" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           {activeTab === '2' && (
             <Form.Item label="Ala Pertencente" name="wardId" rules={[{ required: true }]}>
               <Select placeholder="Selecione a ala">
-                {wards.map(w => <Option key={w.id} value={w.id}>{w.nome}</Option>)}
+                {wards.map((w: any) => <Option key={w.id} value={w.id}>{w.nome}</Option>)}
               </Select>
             </Form.Item>
           )}
@@ -195,6 +195,3 @@ export const StructureListPage = () => {
     </div>
   );
 };
-
-// Ãcones que faltaram na importaÃ§Ã£o (opcional)
-import { CheckCircleOutlined, UserOutlined } from '@ant-design/icons';
