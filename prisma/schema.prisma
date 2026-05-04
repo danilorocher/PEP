@@ -282,9 +282,6 @@ enum KardexAction {
   DEVOLVIDO
 }
 
-// ==========================================
-// NOVOS ENUMS: CENTRO CIRÚRGICO
-// ==========================================
 enum SurgicalStatus {
   AGENDADO
   PRE_OPERATORIO
@@ -305,9 +302,6 @@ enum ResourceType {
   EQUIPAMENTO
 }
 
-// ==========================================
-// NOVOS ENUMS: FATURAMENTO E CONTA HOSPITALAR
-// ==========================================
 enum AccountStatus {
   OPEN
   CLOSED
@@ -351,6 +345,33 @@ enum DenialStatus {
 }
 
 // ==========================================
+// NOVOS ENUMS: LABORATÓRIO (LIS)
+// ==========================================
+enum LabOrderStatus {
+  REQUESTED
+  COLLECTED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum LabSampleStatus {
+  COLLECTED
+  SENT
+  ANALYZED
+  REJECTED
+}
+
+enum LabExamCategory {
+  HEMATOLOGY
+  BIOCHEMISTRY
+  MICROBIOLOGY
+  IMMUNOLOGY
+  URINALYSIS
+  OTHER
+}
+
+// ==========================================
 // 1. TENANT E USUÁRIOS
 // ==========================================
 model Tenant {
@@ -385,7 +406,7 @@ model Tenant {
   hospitalizations   Hospitalization[]
   appointments       Appointment[]
 
-  examRequests              ExamRequest[]
+  examRequests            ExamRequest[]
   billingGuides             BillingGuide[]
   medicationAdministrations MedicationAdministration[]
 
@@ -404,7 +425,6 @@ model Tenant {
 
   kardexRecords MedicationKardex[]
 
-  // Relações Adicionadas - Centro Cirúrgico
   surgicalResources SurgicalResource[]
   surgicalSchedules SurgicalSchedule[]
   preOpChecklists   PreOpChecklist[]
@@ -414,28 +434,36 @@ model Tenant {
   surgeryOPMEs      SurgeryOPME[]
   postOpChecklists  PostOpChecklist[]
 
-  // Relações Adicionadas - Conta Hospitalar e Faturamento
   hospitalAccounts     HospitalAccount[]
   hospitalAccountItems HospitalAccountItem[]
   susBillings          SUSBilling[]
   billingDenials       BillingDenial[]
   drgGroups            DRGGroup[]
 
+  // --- RELAÇÕES LIS ADICIONADAS ---
+  labExams             LabExam[]
+  labOrders            LabOrder[]
+  labSamples           LabSample[]
+  labResults           LabResult[]
+  labReports           LabReport[]
+
   @@index([deletedAt])
 }
 
 model Role {
-  id         String    @id @default(uuid())
-  tenantId   String
-  nome       String
-  permissoes Json
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
-  tenant     Tenant    @relation(fields: [tenantId], references: [id])
-  users      User[]
+  id              String    @id @default(uuid())
+  tenantId        String
+  nome            String
+  permissoes      Json
+  hashPermissoes  String?   // 🔥 NOVO: Para deduplicação e escalabilidade [cite: 258]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  users           User[]
 
   @@unique([nome, tenantId])
+  @@index([tenantId, hashPermissoes]) // 🔥 Índice para busca rápida de perfis idênticos [cite: 258]
   @@index([tenantId, deletedAt])
 }
 
@@ -483,9 +511,14 @@ model User {
   controlledLogs        ControlledMedicationLog[]
   kardexRecords         MedicationKardex[]
 
-  // Relações Adicionadas - Centro Cirúrgico
   preOpChecklistsFilled  PreOpChecklist[]
   postOpChecklistsFilled PostOpChecklist[]
+
+  // --- RELAÇÕES LIS ADICIONADAS ---
+  labOrdersRequested  LabOrder[]  @relation("DoctorLabOrders")
+  labSamplesCollected LabSample[] @relation("NurseLabSamples")
+  labResultsReleased  LabResult[] @relation("PathologistLabResults")
+  labReportsSigned    LabReport[] @relation("PathologistLabReports")
 
   @@unique([email, tenantId])
   @@unique([cpfHash, tenantId])
@@ -545,7 +578,6 @@ model Doctor {
   examRequests          ExamRequest[]
   appointments          Appointment[]
 
-  // Relações Adicionadas - Centro Cirúrgico
   surgeriesAsSurgeon      SurgicalSchedule[] @relation("CirurgiaoPrincipal")
   surgeriesAsAnesthetist  SurgicalSchedule[] @relation("AnestesistaResponsavel")
   anesthesiaRecordsFilled AnesthesiaRecord[] @relation("AnestesistaFicha")
@@ -599,7 +631,6 @@ model Nurse {
   tenant             Tenant        @relation(fields: [tenantId], references: [id])
   user               User?         @relation(fields: [userId], references: [id])
 
-  // Relações Adicionadas - Centro Cirúrgico
   surgeriesAsNurse SurgicalSchedule[] @relation("EnfermeiroCirculante")
 
   @@unique([coren, ufCoren, tenantId])
@@ -783,11 +814,11 @@ model Patient {
   controlledLogs ControlledMedicationLog[]
   kardexRecords  MedicationKardex[]
 
-  // Relações Adicionadas - Centro Cirúrgico
   surgicalSchedules SurgicalSchedule[]
+  hospitalAccounts  HospitalAccount[]
 
-  // Relações Adicionadas - Conta Hospitalar
-  hospitalAccounts HospitalAccount[]
+  // --- RELAÇÕES LIS ADICIONADAS ---
+  labOrders         LabOrder[]
 
   @@unique([cpfHash, tenantId])
   @@index([tenantId, deletedAt])
@@ -818,7 +849,6 @@ model MedicalRecord {
 
   kardexRecords MedicationKardex[]
 
-  // Relações Adicionadas - Centro Cirúrgico
   surgicalSchedules SurgicalSchedule[]
 
   @@unique([numero, tenantId])
@@ -1028,7 +1058,6 @@ model Hospitalization {
   morseAssessments   MorseAssessment[]
   glasgowAssessments GlasgowAssessment[]
 
-  // Relações Adicionadas - Conta Hospitalar
   hospitalAccounts HospitalAccount[]
 
   @@index([tenantId, deletedAt])
@@ -1061,9 +1090,7 @@ model Appointment {
   insurance          Insurance? @relation(fields: [convenioId], references: [id])
   cid10              Cid10?     @relation(fields: [cid10Id], references: [id])
 
-  billingGuides BillingGuide[]
-
-  // Relações Adicionadas - Conta Hospitalar
+  billingGuides    BillingGuide[]
   hospitalAccounts HospitalAccount[]
 
   @@index([tenantId, deletedAt])
@@ -1140,7 +1167,6 @@ model VitalSign {
 
   dataHora DateTime @default(now())
 
-  // Parâmetros vitais
   systolicPressure  Int // Pressão Sistólica (mmHg)
   diastolicPressure Int // Pressão Diastólica (mmHg)
   temperature       Float // Temperatura (ºC)
@@ -1175,7 +1201,6 @@ model FluidBalance {
 
   dataHoraReferencia DateTime // Data/Turno referente ao balanço
 
-  // Totais consolidados automaticamente pelo Backend
   totalInput  Float @default(0.0)
   totalOutput Float @default(0.0)
   balance     Float @default(0.0)
@@ -1251,7 +1276,6 @@ model BradenAssessment {
 
   dataHora DateTime @default(now())
 
-  // Componentes da Escala (1 a 4)
   sensoryPerception Int
   moisture          Int
   activity          Int
@@ -1259,14 +1283,12 @@ model BradenAssessment {
   nutrition         Int
   frictionShear     Int // 1 a 3
 
-  // Calculado pelo backend
   totalScore    Int
   classificacao String
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   patient         Patient          @relation(fields: [patientId], references: [id])
   hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1284,7 +1306,6 @@ model MorseAssessment {
 
   dataHora DateTime @default(now())
 
-  // Componentes da Escala de Quedas
   historyOfFalling   Int
   secondaryDiagnosis Int
   ambulatoryAid      Int
@@ -1292,7 +1313,6 @@ model MorseAssessment {
   gait               Int
   mentalStatus       Int
 
-  // Calculado pelo backend
   totalScore    Int
   classificacao String
 
@@ -1316,15 +1336,12 @@ model GlasgowAssessment {
 
   dataHora DateTime @default(now())
 
-  // Componentes Escala de Coma de Glasgow
   eyeOpening      Int // 1 a 4
   verbalResponse  Int // 1 a 5
   motorResponse   Int // 1 a 6
   pupilReactivity Int?
-
-  // Calculado pelo backend
-  totalScore    Int
-  classificacao String
+  totalScore      Int
+  classificacao   String
 
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -1560,8 +1577,7 @@ model PreOpChecklist {
 
   tenant   Tenant           @relation(fields: [tenantId], references: [id])
   cirurgia SurgicalSchedule @relation(fields: [cirurgiaId], references: [id], onDelete: Cascade)
-
-  responsavel User @relation(fields: [profissionalResponsavel], references: [id])
+  responsavel User            @relation(fields: [profissionalResponsavel], references: [id])
 
   @@index([tenantId, cirurgiaId])
 }
@@ -1580,12 +1596,11 @@ model AnesthesiaRecord {
   sinaisVitais     Json
   inicio           DateTime
   fim              DateTime?
+  createdAt        DateTime @default(now())
 
-  createdAt DateTime @default(now())
-
-  tenant      Tenant           @relation(fields: [tenantId], references: [id])
-  cirurgia    SurgicalSchedule @relation(fields: [cirurgiaId], references: [id], onDelete: Cascade)
-  anestesista Doctor           @relation("AnestesistaFicha", fields: [anestesistaId], references: [id])
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  cirurgia SurgicalSchedule @relation(fields: [cirurgiaId], references: [id], onDelete: Cascade)
+  anestesista Doctor        @relation("AnestesistaFicha", fields: [anestesistaId], references: [id])
 
   @@index([tenantId, cirurgiaId])
 }
@@ -1679,15 +1694,14 @@ model PostOpChecklist {
 // 23. CONTA HOSPITALAR (PACIENTE / INTERNAÇÃO)
 // ==========================================
 model HospitalAccount {
-  id                String  @id @default(uuid())
+  id                String        @id @default(uuid())
   tenantId          String
   patientId         String
   hospitalizationId String?
   appointmentId     String?
   drgGroupId        String?
-
-  status      AccountStatus @default(OPEN)
-  totalAmount Float         @default(0.0)
+  status            AccountStatus @default(OPEN)
+  totalAmount       Float         @default(0.0)
 
   openedAt    DateTime  @default(now())
   closedAt    DateTime?
@@ -1696,7 +1710,6 @@ model HospitalAccount {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   patient         Patient          @relation(fields: [patientId], references: [id])
   hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1729,7 +1742,6 @@ model HospitalAccountItem {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-
   tenant  Tenant          @relation(fields: [tenantId], references: [id])
   account HospitalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
@@ -1753,7 +1765,6 @@ model SUSBilling {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-
   tenant  Tenant          @relation(fields: [tenantId], references: [id])
   account HospitalAccount @relation(fields: [accountId], references: [id])
 
@@ -1775,7 +1786,6 @@ model BillingDenial {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-
   tenant  Tenant          @relation(fields: [tenantId], references: [id])
   account HospitalAccount @relation(fields: [accountId], references: [id])
 
@@ -1796,9 +1806,120 @@ model DRGGroup {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-
   tenant   Tenant            @relation(fields: [tenantId], references: [id])
   accounts HospitalAccount[]
 
   @@unique([tenantId, code])
+}
+
+// ==========================================
+// 🔬 NOVOS MODELS: MÓDULO LABORATÓRIO (LIS)
+// ==========================================
+
+model LabExam {
+  id                   String          @id @default(uuid())
+  tenantId             String
+  name                 String
+  code                 String          // ex: HEMO, GLI, PCR
+  category             LabExamCategory
+  unit                 String?         // mg/dL, g/dL, etc.
+  referenceRangeMale   Json?           // { "min": 70, "max": 99 }
+  referenceRangeFemale Json?
+  criticalMin          Float?
+  criticalMax          Float?
+  status               EntityStatus    @default(ATIVO)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  deletedAt            DateTime?
+  tenant               Tenant          @relation(fields: [tenantId], references: [id])
+  results              LabResult[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, deletedAt])
+}
+
+model LabOrder {
+  id                String         @id @default(uuid())
+  tenantId          String
+  patientId         String
+  medicalRecordId   String?
+  appointmentId     String?
+  hospitalizationId String?
+  status            LabOrderStatus @default(REQUESTED)
+  requestedBy       String         // ID do Médico (User)
+  requestedAt       DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  deletedAt         DateTime?
+  tenant            Tenant         @relation(fields: [tenantId], references: [id])
+  patient           Patient        @relation(fields: [patientId], references: [id])
+  requester         User           @relation("DoctorLabOrders", fields: [requestedBy], references: [id])
+  
+  samples           LabSample[]
+  results           LabResult[]
+  report            LabReport?
+
+  @@index([tenantId, status])
+  @@index([tenantId, patientId])
+}
+
+model LabSample {
+  id           String          @id @default(uuid())
+  tenantId     String
+  labOrderId   String
+  sampleType   String          // SANGUE, URINA, etc.
+  barcode      String          @unique
+  collectedAt  DateTime?
+  collectedBy  String?         // ID do Técnico/Enf (User)
+  status       LabSampleStatus @default(COLLECTED)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  order        LabOrder        @relation(fields: [labOrderId], references: [id])
+  collector    User?           @relation("NurseLabSamples", fields: [collectedBy], references: [id])
+
+  @@index([tenantId, barcode])
+}
+
+model LabResult {
+  id           String    @id @default(uuid())
+  tenantId     String
+  labOrderId   String
+  examId       String
+  value        String    
+  numericValue Float?
+  unit         String?
+  referenceMin Float?
+  referenceMax Float?
+  isCritical   Boolean   @default(false)
+  releasedAt   DateTime?
+  releasedBy   String?   // ID do Patologista (User)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  order        LabOrder  @relation(fields: [labOrderId], references: [id])
+  exam         LabExam   @relation(fields: [examId], references: [id])
+  pathologist  User?     @relation("PathologistLabResults", fields: [releasedBy], references: [id])
+
+  @@index([tenantId, labOrderId])
+}
+
+model LabReport {
+  id               String    @id @default(uuid())
+  tenantId         String
+  labOrderId       String    @unique
+  reportText       String    @db.Text
+  signedBy         String?   // ID do Patologista (User)
+  signedAt         DateTime?
+  digitalSignature String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  order            LabOrder  @relation(fields: [labOrderId], references: [id])
+  pathologist      User?     @relation("PathologistLabReports", fields: [signedBy], references: [id])
+
+  @@index([tenantId, signedAt])
 }

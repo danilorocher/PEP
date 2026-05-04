@@ -12,3 +12,7 @@ body {
 #root {
   min-height: 100vh;
 }
+
+.group-row-bg {
+  background-color: #fafafa !important;
+}

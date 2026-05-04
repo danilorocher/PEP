@@ -13,7 +13,8 @@ import {
   BankOutlined,
   ScissorOutlined,
   WalletOutlined,
-  HeartOutlined
+  HeartOutlined,
+  ExperimentOutlined // 🔥 Novo ícone para o LIS
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -78,6 +79,11 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       key: '/exams',
       icon: <FileSearchOutlined />,
       label: 'Exames',
+    },
+    {
+      key: '/lab', // 🔥 Novo Módulo LIS
+      icon: <ExperimentOutlined />,
+      label: 'Laboratório (LIS)',
     },
     
     // 🔥 FATURAMENTO AGRUPADO (SUBMENU)
