@@ -3,13 +3,15 @@ import { IPrescriptionRepository, PRESCRIPTION_REPOSITORY_TOKEN } from '../../..
 import { IMedicalRecordRepository, MEDICAL_RECORD_REPOSITORY_TOKEN } from '../../../domain/repositories/medical-record.repository.interface';
 import { PrismaService } from '../../../infrastructure/database/prisma/repositories/prisma.service';
 import { AdministerMedicationDto } from '../../../../modules/medications/dto/medication-administration.dto';
+import { AccountConsumptionService } from '../hospital-billing/account-consumption.service'; // 🔥 Nova Importação
 
 @Injectable()
 export class MedicationAdministrationsUseCases {
   constructor(
     @Inject(PRESCRIPTION_REPOSITORY_TOKEN) private readonly prescriptionRepo: IPrescriptionRepository,
     @Inject(MEDICAL_RECORD_REPOSITORY_TOKEN) private readonly medicalRecordRepo: IMedicalRecordRepository,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly consumptionService: AccountConsumptionService // 🔥 Injetado
   ) {}
 
   async getPendingAdministrations(tenantId: string, page: number, limit: number, userId: string, ip: string, userAgent: string) {
@@ -23,7 +25,10 @@ export class MedicationAdministrationsUseCases {
         orderBy: { dataHoraProgamada: 'asc' },
         include: {
           prescriptionItem: {
-            include: { prescription: { select: { medicalRecordId: true } } }
+            include: { 
+              prescription: { select: { medicalRecordId: true } },
+              medication: { select: { nome: true } }
+            }
           }
         }
       }),
@@ -47,7 +52,10 @@ export class MedicationAdministrationsUseCases {
       where: { id: administrationId, tenantId, deletedAt: null },
       include: {
         prescriptionItem: {
-          include: { prescription: { select: { medicalRecordId: true, hospitalizationId: true } } }
+          include: { 
+            prescription: { select: { medicalRecordId: true, hospitalizationId: true } },
+            medication: { select: { nome: true } } // 🔥 Precisamos do nome para o faturamento
+          }
         }
       }
     });
@@ -59,13 +67,34 @@ export class MedicationAdministrationsUseCases {
 
     const record = await this.medicalRecordRepo.findById(admin.prescriptionItem.prescription.medicalRecordId, tenantId);
 
-    await this.prisma.medicationAdministration.update({
-      where: { id: administrationId },
-      data: {
-        status: data.status as any,
-        administradoPor: userId,
-        dataHoraAdministrada: new Date(),
-        observacoes: data.observacoes || admin.observacoes
+    // 🔥 Protegido por uma Transação ACID (Ou salva tudo, ou reverte tudo)
+    await this.prisma.$transaction(async (tx) => {
+      await tx.medicationAdministration.update({
+        where: { id: administrationId },
+        data: {
+          status: data.status as any,
+          administradoPor: userId,
+          dataHoraAdministrada: new Date(),
+          observacoes: data.observacoes || admin.observacoes
+        }
+      });
+
+      // 🔥 INTEGRAÇÃO FINANCEIRA AUTOMÁTICA
+      if (data.status === 'MINISTRADO') {
+        // Num sistema real, o preço viria do catálogo de preços da clínica/fornecedor (Brasíndice/Simpro).
+        // Vamos usar um valor médio simulado para alimentar a conta automaticamente.
+        const valorUnitarioSimulado = 45.90; 
+
+        await this.consumptionService.recordConsumption(tenantId, {
+          patientId: record!.patientId,
+          hospitalizationId: admin.prescriptionItem.prescription.hospitalizationId,
+          tipo: 'MEDICATION',
+          description: `Admin. de Medicamento: ${admin.prescriptionItem.medication.nome} (${admin.prescriptionItem.dosagem})`,
+          quantity: 1,
+          unitPrice: valorUnitarioSimulado,
+          sourceModule: 'PHARMACY',
+          referenceId: admin.prescriptionItemId
+        });
       }
     });
 

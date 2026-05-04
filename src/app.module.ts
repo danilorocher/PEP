@@ -30,10 +30,12 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 
-// 🔥 Módulo de Assistência ao Paciente
 import { AssistanceModule } from './modules/assistance/assistance.module';
-// 🔥 NOVA IMPORTAÇÃO: Módulo de Farmácia Hospitalar
 import { PharmacyModule } from './modules/pharmacy/pharmacy.module';
+// 🔥 IMPORTAÇÃO DO MÓDULO CIRÚRGICO
+import { SurgicalCenterModule } from './modules/surgical-center/surgical-center.module';
+// 🔥 NOVA IMPORTAÇÃO: MÓDULO DE FATURAMENTO AVANÇADO (CONTA DO PACIENTE)
+import { HospitalBillingModule } from './modules/hospital-billing/hospital-billing.module';
 
 @Module({
   imports: [
@@ -95,8 +97,11 @@ import { PharmacyModule } from './modules/pharmacy/pharmacy.module';
 
     // Módulos Assistenciais
     AssistanceModule,
-    // 🔥 NOVO MÓDULO REGISTRADO
     PharmacyModule,
+    // 🔥 MÓDULO DE CENTRO CIRÚRGICO REGISTRADO AQUI NA LISTA
+    SurgicalCenterModule,
+    // 🔥 NOVO MÓDULO DE FATURAMENTO AVANÇADO REGISTRADO AQUI
+    HospitalBillingModule,
   ],
   providers: [
     {

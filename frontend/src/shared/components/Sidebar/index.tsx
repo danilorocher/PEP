@@ -10,7 +10,9 @@ import {
   SolutionOutlined,
   SettingOutlined,
   AuditOutlined,
-  BankOutlined // <-- Novo ícone para Unidades/Empresa
+  BankOutlined, // <-- Novo ícone para Unidades/Empresa
+  ScissorOutlined, // <-- Ícone para o Centro Cirúrgico
+  WalletOutlined // <-- Ícone para a Conta Hospitalar / Faturamento Avançado
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -56,11 +58,17 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       icon: <MedicineBoxOutlined />,
       label: 'Medicações',
     },
-    // 🔥 NOVA OPÇÃO ADICIONADA AQUI: Módulo de Farmácia Hospitalar
+    // Módulo de Farmácia Hospitalar
     {
       key: '/pharmacy',
       icon: <MedicineBoxOutlined />,
       label: 'Farmácia',
+    },
+    // Módulo de Centro Cirúrgico
+    {
+      key: '/surgical-center',
+      icon: <ScissorOutlined />,
+      label: 'Bloco Cirúrgico',
     },
     {
       key: '/exams',
@@ -70,7 +78,13 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
     {
       key: '/billing',
       icon: <ContainerOutlined />,
-      label: 'Faturamento',
+      label: 'Guias TISS',
+    },
+    // 🔥 NOVA OPÇÃO ADICIONADA AQUI: Conta Hospitalar / DRG
+    {
+      key: '/hospital-billing',
+      icon: <WalletOutlined />,
+      label: 'Conta & Faturação',
     },
     {
       key: '/reports',
@@ -83,7 +97,7 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       label: 'Sistema',
       children: [
         { key: '/professionals', label: 'Profissionais' }, 
-        { key: '/companies', label: 'Minhas Unidades' }, // <-- Nova opção adicionada aqui
+        { key: '/companies', label: 'Minhas Unidades' },
         { key: '/admin', label: 'Estrutura Hospitalar' },
       ]
     },

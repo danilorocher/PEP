@@ -25,6 +25,12 @@ import { CompanyFormPage } from '../modules/companies/pages/CompanyForm';
 // 🔥 NOVA IMPORTAÇÃO: Módulo de Farmácia Hospitalar
 import { PharmacyDashboardPage } from '../modules/pharmacy/pages/PharmacyDashboard';
 
+// 🔥 NOVA IMPORTAÇÃO: Módulo de Centro Cirúrgico
+import { SurgicalDashboardPage } from '../modules/surgical-center/pages/SurgicalDashboard';
+
+// 🔥 NOVA IMPORTAÇÃO: Módulo de Faturamento Avançado / Conta Hospitalar
+import { HospitalBillingDashboard } from '../modules/hospital-billing/pages/HospitalBillingDashboard';
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -66,14 +72,20 @@ const AppRoutes = () => {
         
         <Route path="/reports" element={<MainLayout><ReportsPage /></MainLayout>} />
 
-        {/* Módulo de Faturamento */}
+        {/* Módulo de Faturamento TISS Básico */}
         <Route path="/billing" element={<MainLayout><BillingListPage /></MainLayout>} />
+
+        {/* 🔥 NOVA ROTA: Conta Hospitalar / Faturamento Avançado */}
+        <Route path="/hospital-billing" element={<MainLayout><HospitalBillingDashboard /></MainLayout>} />
         
         {/* Módulo de Exames Atualizado */}
         <Route path="/exams" element={<MainLayout><ExamListPage /></MainLayout>} />
 
         {/* 🔥 NOVA ROTA: Módulo de Farmácia Hospitalar */}
         <Route path="/pharmacy" element={<MainLayout><PharmacyDashboardPage /></MainLayout>} />
+
+        {/* 🔥 NOVA ROTA: Módulo de Centro Cirúrgico */}
+        <Route path="/surgical-center" element={<MainLayout><SurgicalDashboardPage /></MainLayout>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
