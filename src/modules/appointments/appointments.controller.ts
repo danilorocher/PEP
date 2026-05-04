@@ -7,6 +7,9 @@ import { AppointmentsUseCases } from '../../shared/application/use-cases/appoint
 import { CreateAppointmentDto, CancelAppointmentDto, FinishAppointmentDto } from './dto/appointment.dto';
 import { TenantRequest } from '../../common/middlewares/tenant.middleware';
 
+import { QueryAppointmentsDto } from './dto/query-appointments.dto';
+import { TransformResponse } from '../../shared/interceptors/transform.interceptor';
+
 @ApiTags('Appointments (Agendamentos)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -22,6 +25,7 @@ export class AppointmentsController {
   }
 
   @Get('today')
+  @TransformResponse()
   @ApiOperation({ summary: 'Listar a agenda de hoje (Dashboard)' })
   @RequirePermissions({ module: 'agendamento', action: 'visualizar' })
   findToday(@Req() req: TenantRequest) {
@@ -41,17 +45,10 @@ export class AppointmentsController {
   }
 
   @Get()
+  @TransformResponse()
   @RequirePermissions({ module: 'agendamento', action: 'visualizar' })
-  findAll(
-    @Req() req: TenantRequest,
-    @Query('doctorId') doctorId?: string,
-    @Query('patientId') patientId?: string,
-    @Query('status') status?: string,
-    @Query('dataInicial') dataInicial?: string,
-    @Query('dataFinal') dataFinal?: string
-  ) {
-    const filters = { doctorId, patientId, status, dataInicial: dataInicial ? new Date(dataInicial) : undefined, dataFinal: dataFinal ? new Date(dataFinal) : undefined };
-    return this.apptUseCases.findAll(req.tenant.id, filters);
+  findAll(@Req() req: TenantRequest, @Query() query: QueryAppointmentsDto) {
+    return this.apptUseCases.findAll(req.tenant.id, query);
   }
 
   @Patch(':id/confirm')

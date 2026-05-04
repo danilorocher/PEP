@@ -4,9 +4,13 @@ import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../shared/guards/permissions.guard';
 import { RequirePermissions } from '../../shared/decorators/permissions.decorator';
 import { BillingUseCases } from '../../shared/application/use-cases/billing/billing.use-cases';
-import { CreateBillingGuideDto, UpdateBillingGuideStatusDto, BillingGuideStatus } from './dto/billing-guide.dto';
+import { CreateBillingGuideDto, UpdateBillingGuideStatusDto } from './dto/billing-guide.dto';
 import { GlossItemDto } from './dto/billing-item.dto';
 import type { TenantRequest } from '../../common/middlewares/tenant.middleware';
+
+// 🔥 Importações de Resposta Padrão
+import { QueryBillingGuidesDto } from './dto/query-billing.dto';
+import { TransformResponse } from '../../shared/interceptors/transform.interceptor';
 
 @ApiTags('Billing (Faturamento TISS)')
 @ApiBearerAuth()
@@ -23,25 +27,11 @@ export class BillingController {
   }
 
   @Get('guides')
-  @ApiOperation({ summary: 'Listar guias com filtros' })
+  @TransformResponse() // 🔥 Adicionado para o formato {success, data, meta}
+  @ApiOperation({ summary: 'Listar guias com paginação e filtros' })
   @RequirePermissions({ module: 'faturamento', action: 'visualizar' })
-  findAll(
-    @Req() req: TenantRequest,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('convenioId') convenioId?: string,
-    @Query('status') status?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.billingUseCases.listGuides(req.tenant.id, {
-      page,
-      limit,
-      convenioId,
-      status,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    });
+  findAll(@Req() req: TenantRequest, @Query() query: QueryBillingGuidesDto) {
+    return this.billingUseCases.listGuides(req.tenant.id, query);
   }
 
   @Get('guides/:id')

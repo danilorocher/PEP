@@ -34,9 +34,7 @@ export class PrismaExamRequestRepository implements IExamRequestRepository {
   }
 
   async findById(id: string, tenantId: string): Promise<ExamRequest | null> {
-    const record = await this.prisma.examRequest.findFirst({
-      where: { id, tenantId, deletedAt: null }
-    });
+    const record = await this.prisma.examRequest.findFirst({ where: { id, tenantId, deletedAt: null } });
     return this.toDomain(record);
   }
 
@@ -45,9 +43,12 @@ export class PrismaExamRequestRepository implements IExamRequestRepository {
     if (filters?.patientId) where.patientId = filters.patientId;
     if (filters?.medicalRecordId) where.medicalRecordId = filters.medicalRecordId;
     if (filters?.status) where.status = filters.status;
+    if (filters?.dataInicial && filters?.dataFinal) {
+      where.dataHoraSolicitacao = { gte: new Date(filters.dataInicial), lte: new Date(filters.dataFinal) };
+    }
 
     const [data, total] = await Promise.all([
-      this.prisma.examRequest.findMany({ where, skip, take, orderBy: { dataHoraSolicitacao: 'desc' }, include: { exam: true } }),
+      this.prisma.examRequest.findMany({ where, skip, take, orderBy: { dataHoraSolicitacao: 'desc' }, include: { exam: true, patient: true, doctor: true } }),
       this.prisma.examRequest.count({ where })
     ]);
     return { data: data.map(r => this.toDomain(r)), total };

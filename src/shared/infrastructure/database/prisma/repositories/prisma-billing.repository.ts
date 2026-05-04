@@ -10,42 +10,20 @@ export class PrismaBillingRepository implements IBillingRepository {
 
   private toGuideDomain(record: any): BillingGuide {
     return new BillingGuide(
-      record.id,
-      record.tenantId,
-      record.patientId,
-      record.convenioId,
-      record.tipo,
-      record.status,
-      record.hospitalizationId,
-      record.appointmentId,
-      record.numeroGuia,
-      record.dataEmissao,
-      record.dataAutorizacao,
-      record.codigoAutorizacao,
-      record.valorTotal,
-      record.observacoes,
-      record.createdAt,
-      record.updatedAt,
-      record.deletedAt
+      record.id, record.tenantId, record.patientId, record.convenioId,
+      record.tipo, record.status, record.hospitalizationId, record.appointmentId,
+      record.numeroGuia, record.dataEmissao, record.dataAutorizacao,
+      record.codigoAutorizacao, record.valorTotal, record.observacoes,
+      record.createdAt, record.updatedAt, record.deletedAt
     );
   }
 
   private toItemDomain(record: any): BillingItem {
     return new BillingItem(
-      record.id,
-      record.billingGuideId,
-      record.procedimentoDescricao,
-      record.codigoTUSS,
-      record.quantidade,
-      record.valorUnitario,
-      record.valorTotal,
-      record.status,
-      record.examId,
-      record.medicationId,
-      record.motivoGlosa,
-      record.createdAt,
-      record.updatedAt,
-      record.deletedAt
+      record.id, record.billingGuideId, record.procedimentoDescricao,
+      record.codigoTUSS, record.quantidade, record.valorUnitario,
+      record.valorTotal, record.status, record.examId, record.medicationId,
+      record.motivoGlosa, record.createdAt, record.updatedAt, record.deletedAt
     );
   }
 
@@ -53,32 +31,20 @@ export class PrismaBillingRepository implements IBillingRepository {
     const created = await this.prisma.$transaction(async (tx) => {
       const g = await tx.billingGuide.create({
         data: {
-          id: guide.id,
-          tenantId: guide.tenantId,
-          patientId: guide.patientId,
-          convenioId: guide.convenioId,
-          tipo: guide.tipo as any,
-          status: guide.status as any,
-          hospitalizationId: guide.hospitalizationId,
-          appointmentId: guide.appointmentId,
-          numeroGuia: guide.numeroGuia,
-          observacoes: guide.observacoes,
-          valorTotal: guide.valorTotal,
+          id: guide.id, tenantId: guide.tenantId, patientId: guide.patientId,
+          convenioId: guide.convenioId, tipo: guide.tipo as any,
+          status: guide.status as any, hospitalizationId: guide.hospitalizationId,
+          appointmentId: guide.appointmentId, numeroGuia: guide.numeroGuia,
+          observacoes: guide.observacoes, valorTotal: guide.valorTotal,
         },
       });
 
       await tx.billingItem.createMany({
         data: items.map((item) => ({
-          id: item.id,
-          billingGuideId: g.id,
-          procedimentoDescricao: item.procedimentoDescricao,
-          codigoTUSS: item.codigoTUSS,
-          quantidade: item.quantidade,
-          valorUnitario: item.valorUnitario,
-          valorTotal: item.valorTotal,
-          status: item.status as any,
-          examId: item.examId,
-          medicationId: item.medicationId,
+          id: item.id, billingGuideId: g.id, procedimentoDescricao: item.procedimentoDescricao,
+          codigoTUSS: item.codigoTUSS, quantidade: item.quantidade,
+          valorUnitario: item.valorUnitario, valorTotal: item.valorTotal,
+          status: item.status as any, examId: item.examId, medicationId: item.medicationId,
         })),
       });
 
@@ -102,16 +68,17 @@ export class PrismaBillingRepository implements IBillingRepository {
     return Object.assign(guide, { items });
   }
 
-  async findAll(tenantId: string, filters: any): Promise<{ data: BillingGuide[]; total: number }> {
+  // 🔥 Implementação atualizada para suportar os filtros universais
+  async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: BillingGuide[]; total: number }> {
     const where: any = {
       tenantId,
       deletedAt: null,
-      ...(filters.convenioId && { convenioId: filters.convenioId }),
-      ...(filters.status && { status: filters.status }),
-      ...((filters.startDate || filters.endDate) && {
+      ...(filters?.convenioId && { convenioId: filters.convenioId }),
+      ...(filters?.status && { status: filters.status as any }),
+      ...((filters?.startDate || filters?.endDate) && {
         dataEmissao: {
-          ...(filters.startDate && { gte: filters.startDate }),
-          ...(filters.endDate && { lte: filters.endDate }),
+          ...(filters?.startDate && { gte: new Date(filters.startDate) }),
+          ...(filters?.endDate && { lte: new Date(filters.endDate) }),
         },
       }),
     };
@@ -119,8 +86,8 @@ export class PrismaBillingRepository implements IBillingRepository {
     const [data, total] = await Promise.all([
       this.prisma.billingGuide.findMany({
         where,
-        skip: filters.skip,
-        take: filters.take,
+        skip,
+        take,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.billingGuide.count({ where }),

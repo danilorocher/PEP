@@ -6,6 +6,10 @@ import { CreateBillingGuideDto, BillingGuideStatus, UpdateBillingGuideStatusDto 
 import { GlossItemDto } from '../../../../modules/billing/dto/billing-item.dto';
 import * as crypto from 'crypto';
 
+// 🔥 Importações para Paginação Universal
+import { QueryBillingGuidesDto } from '../../../../modules/billing/dto/query-billing.dto';
+import { buildPaginationQuery, buildPaginatedResult } from '../../../infrastructure/utils/prisma-pagination.util';
+
 @Injectable()
 export class BillingUseCases {
   constructor(
@@ -23,34 +27,16 @@ export class BillingUseCases {
       total += itemTotal;
 
       return new BillingItem(
-        itemId,
-        guideId,
-        item.procedimentoDescricao,
-        item.codigoTUSS,
-        item.quantidade,
-        item.valorUnitario,
-        itemTotal,
-        'AUTORIZADO',
-        item.examId,
-        item.medicationId
+        itemId, guideId, item.procedimentoDescricao, item.codigoTUSS,
+        item.quantidade, item.valorUnitario, itemTotal, 'AUTORIZADO',
+        item.examId, item.medicationId
       );
     });
 
     const guide = new BillingGuide(
-      guideId,
-      tenantId,
-      data.patientId,
-      data.convenioId,
-      data.tipo,
-      BillingGuideStatus.RASCUNHO,
-      data.hospitalizationId,
-      data.appointmentId,
-      data.numeroGuia,
-      new Date(),
-      null,
-      null,
-      total,
-      data.observacoes
+      guideId, tenantId, data.patientId, data.convenioId, data.tipo,
+      BillingGuideStatus.RASCUNHO, data.hospitalizationId, data.appointmentId,
+      data.numeroGuia, new Date(), null, null, total, data.observacoes
     );
 
     return this.billingRepo.create(guide, items);
@@ -62,12 +48,21 @@ export class BillingUseCases {
     return guide;
   }
 
-  async listGuides(tenantId: string, filters: any) {
-    return this.billingRepo.findAll(tenantId, {
-      ...filters,
-      skip: (Number(filters.page || 1) - 1) * Number(filters.limit || 10),
-      take: Number(filters.limit || 10),
-    });
+  // 🔥 Refatorado para usar Paginação Universal
+  async listGuides(tenantId: string, query: QueryBillingGuidesDto) {
+    const { page, limit, convenioId, status, startDate, endDate } = query;
+    const { skip, take } = buildPaginationQuery(page, limit);
+
+    const filters = {
+      convenioId,
+      status,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+    };
+
+    const { data, total } = await this.billingRepo.findAll(tenantId, skip, take, filters);
+    
+    return buildPaginatedResult(data, total, page, limit);
   }
 
   async submitGuide(id: string, tenantId: string) {
@@ -89,9 +84,7 @@ export class BillingUseCases {
     }
 
     await this.billingRepo.updateStatus(
-      id,
-      tenantId,
-      data.status,
+      id, tenantId, data.status,
       data.dataAutorizacao ? new Date(data.dataAutorizacao) : undefined,
       data.codigoAutorizacao
     );

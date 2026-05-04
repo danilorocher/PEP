@@ -7,6 +7,9 @@ import { HospitalizationsUseCases } from '../../shared/application/use-cases/hos
 import { AdmitPatientDto, DischargePatientDto } from './dto/hospitalization.dto';
 import type { TenantRequest } from '../../common/middlewares/tenant.middleware';
 
+import { QueryHospitalizationsDto } from './dto/query-hospitalizations.dto';
+import { TransformResponse } from '../../shared/interceptors/transform.interceptor';
+
 @ApiTags('Hospitalizations (Internações)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -43,19 +46,16 @@ export class HospitalizationsController {
   }
 
   @Get()
+  @TransformResponse()
   @ApiOperation({ summary: 'Listar internações' })
   @RequirePermissions({ module: 'internacao', action: 'visualizar' })
   findAll(
     @Req() req: TenantRequest,
-    @Query('page') page: string,
-    @Query('limit') limit: string,
-    @Query('patientId') patientId: string,
-    @Query('status') status: string,
+    @Query() query: QueryHospitalizationsDto,
     @Ip() ip: string,
     @Headers('user-agent') userAgent: string
   ) {
     const userId = (req as any).user.sub;
-    const filters = { patientId, status };
-    return this.hospitalizationsUseCases.findAll(req.tenant.id, Number(page) || 1, Number(limit) || 10, filters, userId, ip, userAgent || 'N/A');
+    return this.hospitalizationsUseCases.findAll(req.tenant.id, query, userId, ip, userAgent || 'N/A');
   }
 }

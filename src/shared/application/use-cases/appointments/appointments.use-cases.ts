@@ -6,6 +6,9 @@ import { Queue } from 'bullmq';
 import * as crypto from 'crypto';
 import { CreateAppointmentDto, CancelAppointmentDto, FinishAppointmentDto } from '../../../../modules/appointments/dto/appointment.dto';
 
+import { QueryAppointmentsDto } from '../../../../modules/appointments/dto/query-appointments.dto';
+import { buildPaginationQuery, buildPaginatedResult } from '../../../infrastructure/utils/prisma-pagination.util';
+
 @Injectable()
 export class AppointmentsUseCases {
   constructor(
@@ -44,8 +47,13 @@ export class AppointmentsUseCases {
     return savedAppt;
   }
 
-  async findAll(tenantId: string, filters?: any) {
-    return this.apptRepo.findAll(tenantId, filters);
+  async findAll(tenantId: string, query: QueryAppointmentsDto) {
+    const { page, limit, doctorId, patientId, status, dataInicial, dataFinal } = query;
+    const { skip, take } = buildPaginationQuery(page, limit);
+    const filters = { doctorId, patientId, status, dataInicial, dataFinal };
+    
+    const { data, total } = await this.apptRepo.findAll(tenantId, skip, take, filters);
+    return buildPaginatedResult(data, total, page, limit);
   }
 
   async findToday(tenantId: string) {
@@ -54,7 +62,9 @@ export class AppointmentsUseCases {
     const amanha = new Date(hoje);
     amanha.setDate(amanha.getDate() + 1);
 
-    return this.apptRepo.findAll(tenantId, { dataInicial: hoje, dataFinal: amanha });
+    // Bypass da paginação para buscar o dia inteiro sem perder performance (limite 1000)
+    const { data, total } = await this.apptRepo.findAll(tenantId, 0, 1000, { dataInicial: hoje.toISOString(), dataFinal: amanha.toISOString() });
+    return buildPaginatedResult(data, total, 1, 1000);
   }
 
   async checkAvailability(doctorId: string, tenantId: string, dataHora: string, duracao: number) {

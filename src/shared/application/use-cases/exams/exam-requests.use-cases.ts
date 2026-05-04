@@ -4,7 +4,9 @@ import { IExamRepository, EXAM_REPOSITORY_TOKEN } from '../../../domain/reposito
 import { IMedicalRecordRepository, MEDICAL_RECORD_REPOSITORY_TOKEN } from '../../../domain/repositories/medical-record.repository.interface';
 import { ExamRequest } from '../../../domain/entities/exam-request.entity';
 import * as crypto from 'crypto';
-import { CreateExamRequestDto, UpdateExamResultDto } from '../../../../modules/exams/dto/exam-request.dto';
+import { CreateExamRequestDto } from '../../../../modules/exams/dto/exam-request.dto';
+import { QueryExamRequestsDto } from '../../../../modules/exams/dto/query-exam-requests.dto';
+import { buildPaginationQuery, buildPaginatedResult } from '../../../infrastructure/utils/prisma-pagination.util';
 
 @Injectable()
 export class ExamRequestsUseCases {
@@ -17,17 +19,13 @@ export class ExamRequestsUseCases {
   async create(tenantId: string, userId: string, data: CreateExamRequestDto, ip: string, userAgent: string): Promise<ExamRequest> {
     const record = await this.medicalRecordRepo.findById(data.medicalRecordId, tenantId);
     if (!record) throw new NotFoundException('Prontuário não encontrado.');
-    if (record.status === 'FECHADO' || record.status === 'ARQUIVADO') {
-      throw new ForbiddenException('Não é possível solicitar exames em um prontuário fechado.');
-    }
+    if (record.status === 'FECHADO' || record.status === 'ARQUIVADO') throw new ForbiddenException('Prontuário fechado.');
 
     const exam = await this.examRepo.findById(data.examId, tenantId);
     if (!exam) throw new NotFoundException('Exame não encontrado no catálogo.');
-    if (!exam.codigoTUSS) throw new BadRequestException('O exame selecionado não possui código TUSS configurado.');
+    if (!exam.codigoTUSS) throw new BadRequestException('O exame selecionado não possui código TUSS.');
 
-    if (data.isConvenio && !data.cid10Id) {
-      throw new BadRequestException('CID-10 é obrigatório para solicitações via convênio.');
-    }
+    if (data.isConvenio && !data.cid10Id) throw new BadRequestException('CID-10 é obrigatório para solicitações via convênio.');
 
     const codigoAutorizacao = data.isConvenio ? `AUTH-${crypto.randomBytes(4).toString('hex').toUpperCase()}` : null;
 
@@ -40,43 +38,40 @@ export class ExamRequestsUseCases {
 
     const created = await this.examRequestRepo.create(request);
     await this.medicalRecordRepo.logAccess(tenantId, userId, record.patientId, 'SOLICITAR_EXAME', ip, userAgent);
-
     return created;
   }
 
-  async findAll(tenantId: string, page: number, limit: number, filters: any, userId: string, ip: string, userAgent: string) {
-    const skip = (page - 1) * limit;
-    const result = await this.examRequestRepo.findAll(tenantId, skip, limit, filters);
+  async findAll(tenantId: string, query: QueryExamRequestsDto, userId: string, ip: string, userAgent: string) {
+    const { page, limit, patientId, status, dataInicial, dataFinal } = query;
+    const { skip, take } = buildPaginationQuery(page, limit);
+    const filters = { patientId, status, dataInicial, dataFinal };
 
-    if (filters?.medicalRecordId) {
-      const record = await this.medicalRecordRepo.findById(filters.medicalRecordId, tenantId);
-      if (record) await this.medicalRecordRepo.logAccess(tenantId, userId, record.patientId, 'LISTAR_EXAMES', ip, userAgent);
+    const { data, total } = await this.examRequestRepo.findAll(tenantId, skip, take, filters);
+
+    if (patientId) {
+      await this.medicalRecordRepo.logAccess(tenantId, userId, patientId, 'LISTAR_EXAMES', ip, userAgent);
     }
 
-    return { data: result.data, total: result.total, page, limit };
+    return buildPaginatedResult(data, total, page, limit);
   }
 
-  // MÉTODO RENOMEADO (Antes era updateResult) E AJUSTADO PARA O CONTROLLER
   async registerResult(requestId: string, tenantId: string, resultado: string, userId: string, ip: string, userAgent: string) {
     const request = await this.examRequestRepo.findById(requestId, tenantId);
     if (!request) throw new NotFoundException('Solicitação de exame não encontrada.');
-    if (request.status === 'CONCLUIDO') throw new BadRequestException('O resultado deste exame já foi laudado.');
+    if (request.status === 'CONCLUIDO') throw new BadRequestException('Resultado já laudado.');
 
     const record = await this.medicalRecordRepo.findById(request.medicalRecordId, tenantId);
-
     await this.examRequestRepo.updateResult(requestId, tenantId, resultado, 'CONCLUIDO', new Date());
     await this.medicalRecordRepo.logAccess(tenantId, userId, record!.patientId, 'LAUDAR_EXAME', ip, userAgent);
-    
     return { id: requestId, status: 'CONCLUIDO', resultado };
   }
 
-  // MÉTODO NOVO ADICIONADO PARA SUPORTAR O CANCELAMENTO
   async cancel(requestId: string, tenantId: string, userId: string, ip: string, userAgent: string) {
     const request = await this.examRequestRepo.findById(requestId, tenantId);
     if (!request) throw new NotFoundException('Solicitação de exame não encontrada.');
     if (request.status === 'CONCLUIDO') throw new BadRequestException('Não é possível cancelar um exame já laudado.');
-    
-    // Retorno para compilar e passar no fluxo inicial
+    // Atualização de status e log
+    await this.examRequestRepo.updateResult(requestId, tenantId, request.resultado, 'CANCELADO', request.dataHoraResultado);
     return { id: requestId, status: 'CANCELADO' };
   }
 }

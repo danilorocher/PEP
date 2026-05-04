@@ -38,21 +38,22 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     return this.toDomain(record);
   }
 
-  async findAll(tenantId: string, filters?: any): Promise<Appointment[]> {
+  // 🔥 Método atualizado para suportar paginação
+  async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Appointment[]; total: number }> {
     const where: any = { tenantId, deletedAt: null };
     
     if (filters?.doctorId) where.doctorId = filters.doctorId;
     if (filters?.patientId) where.patientId = filters.patientId;
     if (filters?.status) where.status = filters.status;
     if (filters?.dataInicial && filters?.dataFinal) {
-      where.dataHora = { gte: filters.dataInicial, lte: filters.dataFinal };
+      where.dataHora = { gte: new Date(filters.dataInicial), lte: new Date(filters.dataFinal) };
     }
 
-    const records = await this.prisma.appointment.findMany({
-      where,
-      orderBy: { dataHora: 'asc' }
-    });
-    return records.map(this.toDomain);
+    const [data, total] = await Promise.all([
+      this.prisma.appointment.findMany({ where, skip, take, orderBy: { dataHora: 'asc' }, include: { patient: true, doctor: true } }),
+      this.prisma.appointment.count({ where })
+    ]);
+    return { data: data.map(r => this.toDomain(r)), total };
   }
 
   async update(appointment: Appointment): Promise<void> {

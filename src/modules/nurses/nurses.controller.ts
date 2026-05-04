@@ -17,7 +17,7 @@ export class NursesController {
   constructor(private readonly nursesUseCases: NursesUseCases) {}
  
   @Post()
-  @RequirePermissions({ module: 'sistema', action: 'administrar' })
+  @RequirePermissions({ module: 'enfermeiros', action: 'criar' })
   create(@Body() createNurseDto: CreateNurseDto, @Req() req: TenantRequest) {
     const requesterRole = (req as any).user.role;
     return this.nursesUseCases.create(req.tenant.id, createNurseDto, requesterRole);
@@ -25,26 +25,26 @@ export class NursesController {
  
   @Get()
   @TransformResponse()
-  @RequirePermissions({ module: 'sistema', action: 'administrar' })
+  @RequirePermissions({ module: 'enfermeiros', action: 'visualizar' }) // 🔥 Alterado
   findAll(@Req() req: TenantRequest, @Query() query: QueryNursesDto) {
     return this.nursesUseCases.findAll(req.tenant.id, query);
   }
  
   @Get(':id')
-  @RequirePermissions({ module: 'sistema', action: 'administrar' })
+  @RequirePermissions({ module: 'enfermeiros', action: 'visualizar' })
   findOne(@Param('id') id: string, @Req() req: TenantRequest) {
     return this.nursesUseCases.findOne(id, req.tenant.id);
   }
  
   @Patch(':id')
-  @RequirePermissions({ module: 'sistema', action: 'administrar' })
+  @RequirePermissions({ module: 'enfermeiros', action: 'editar' })
   update(@Param('id') id: string, @Body() updateNurseDto: UpdateNurseDto, @Req() req: TenantRequest) {
     const requesterRole = (req as any).user.role;
     return this.nursesUseCases.update(id, req.tenant.id, updateNurseDto, requesterRole);
   }
  
   @Delete(':id')
-  @RequirePermissions({ module: 'sistema', action: 'administrar' })
+  @RequirePermissions({ module: 'enfermeiros', action: 'excluir' })
   remove(@Param('id') id: string, @Req() req: TenantRequest) {
     return this.nursesUseCases.remove(id, req.tenant.id);
   }

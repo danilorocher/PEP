@@ -3,7 +3,10 @@ import { Appointment } from '../entities/appointment.entity';
 export interface IAppointmentRepository {
   create(appointment: Appointment): Promise<Appointment>;
   findById(id: string, tenantId: string): Promise<Appointment | null>;
-  findAll(tenantId: string, filters?: any): Promise<Appointment[]>;
+  
+  // 🔥 Assinatura atualizada para paginação:
+  findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Appointment[]; total: number }>;
+  
   update(appointment: Appointment): Promise<void>;
   
   // Regras de negócio complexas mapeadas para o banco

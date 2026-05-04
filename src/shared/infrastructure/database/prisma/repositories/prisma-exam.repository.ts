@@ -28,16 +28,22 @@ export class PrismaExamRepository implements IExamRepository {
   }
 
   async findById(id: string, tenantId: string): Promise<Exam | null> {
-    const record = await this.prisma.exam.findFirst({
-      where: { id, tenantId, deletedAt: null }
-    });
+    const record = await this.prisma.exam.findFirst({ where: { id, tenantId, deletedAt: null } });
     return this.toDomain(record);
   }
 
-  async findAll(tenantId: string, skip: number, take: number): Promise<{ data: Exam[]; total: number }> {
+  async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Exam[]; total: number }> {
+    const where: any = { tenantId, deletedAt: null };
+    if (filters?.tipo) where.tipo = filters.tipo;
+    if (filters?.search) {
+      where.OR = [
+        { nome: { contains: filters.search, mode: 'insensitive' } },
+        { codigoTUSS: { contains: filters.search } }
+      ];
+    }
     const [data, total] = await Promise.all([
-      this.prisma.exam.findMany({ where: { tenantId, deletedAt: null }, skip, take }),
-      this.prisma.exam.count({ where: { tenantId, deletedAt: null } })
+      this.prisma.exam.findMany({ where, skip, take, orderBy: { nome: 'asc' } }),
+      this.prisma.exam.count({ where })
     ]);
     return { data: data.map(r => this.toDomain(r)), total };
   }

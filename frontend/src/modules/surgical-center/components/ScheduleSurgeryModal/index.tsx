@@ -33,6 +33,7 @@ export const ScheduleSurgeryModal: React.FC<ScheduleSurgeryModalProps> = ({ visi
 
   const fetchFormData = async () => {
     try {
+      // Carrega os dados em paralelo
       const [pRes, dRes, nRes, rRes] = await Promise.all([
         api.get('/patients', { params: { limit: 200, status: 'ATIVO' } }),
         api.get('/doctors', { params: { limit: 200, status: 'ATIVO' } }),
@@ -40,13 +41,23 @@ export const ScheduleSurgeryModal: React.FC<ScheduleSurgeryModalProps> = ({ visi
         surgicalCenterService.getResources()
       ]);
       
-      setPatients(pRes.data?.data || pRes.data || []);
-      setDoctors(dRes.data?.data || dRes.data || []);
-      setNurses(nRes.data?.data || nRes.data || []);
-      // Filtra apenas recursos do tipo SALA que estão operacionais
-      setSalas((rRes.data || []).filter((r: any) => r.tipo === 'SALA' && r.status === 'ATIVO'));
-    } catch (error) {
-      message.error('Erro ao carregar dados para o agendamento.');
+      // 🔥 Tratamento robusto para o novo formato { data: { success, data: [], meta } }
+      const getArray = (res: any) => {
+        if (res.data?.data && Array.isArray(res.data.data)) return res.data.data; // Formato TransformInterceptor
+        if (Array.isArray(res.data)) return res.data; // Formato Array Simples
+        return [];
+      };
+
+      setPatients(getArray(pRes));
+      setDoctors(getArray(dRes));
+      setNurses(getArray(nRes));
+      
+      // Recursos do Centro Cirúrgico não usam o Interceptor global por padrão
+      const resources = Array.isArray(rRes.data) ? rRes.data : (rRes.data?.data || []);
+      setSalas(resources.filter((r: any) => r.tipo === 'SALA' && r.status === 'ATIV'));
+    } catch (error: any) {
+      console.error("Erro no carregamento do modal:", error.response?.data || error.message);
+      message.error('Erro ao carregar dados auxiliares. Verifique as suas permissões.');
     }
   };
 

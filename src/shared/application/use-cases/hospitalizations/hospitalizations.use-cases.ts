@@ -7,6 +7,10 @@ import { Hospitalization } from '../../../domain/entities/hospitalization.entity
 import * as crypto from 'crypto';
 import { AdmitPatientDto, DischargePatientDto } from '../../../../modules/hospitalizations/dto/hospitalization.dto';
 
+// 🔥 Paginação e Filtros
+import { QueryHospitalizationsDto } from '../../../../modules/hospitalizations/dto/query-hospitalizations.dto';
+import { buildPaginationQuery, buildPaginatedResult } from '../../../infrastructure/utils/prisma-pagination.util';
+
 @Injectable()
 export class HospitalizationsUseCases {
   constructor(
@@ -112,9 +116,13 @@ export class HospitalizationsUseCases {
     });
   }
 
-  async findAll(tenantId: string, page: number, limit: number, filters: any, userId: string, ip: string, userAgent: string) {
-    const skip = (page - 1) * limit;
-    const result = await this.hospRepo.findAll(tenantId, skip, limit, filters);
+  // 🔥 MÉTODO REFATORADO PARA PAGINAÇÃO
+  async findAll(tenantId: string, query: QueryHospitalizationsDto, userId: string, ip: string, userAgent: string) {
+    const { page, limit, patientId, status, wardId, medicoResponsavelId } = query;
+    const { skip, take } = buildPaginationQuery(page, limit);
+    const filters = { patientId, status, wardId, medicoResponsavelId };
+
+    const { data, total } = await this.hospRepo.findAll(tenantId, skip, take, filters);
     
     await this.prisma.auditLog.create({
       data: {
@@ -123,6 +131,6 @@ export class HospitalizationsUseCases {
       }
     });
 
-    return { data: result.data, total: result.total, page, limit };
+    return buildPaginatedResult(data, total, page, limit);
   }
 }
