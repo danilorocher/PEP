@@ -6,6 +6,10 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { CreateUserDto, UpdateUserDto, ChangePasswordDto } from '../../../../modules/users/dto/user.dto';
 
+// 🔥 Paginação
+import { QueryUsersDto } from '../../../../modules/users/dto/query-users.dto';
+import { buildPaginationQuery, buildPaginatedResult } from '../../../infrastructure/utils/prisma-pagination.util';
+
 @Injectable()
 export class UsersUseCases {
   constructor(
@@ -16,17 +20,14 @@ export class UsersUseCases {
   async create(tenantId: string, data: CreateUserDto): Promise<Omit<User, 'password'>> {
     const cpfHash = this.encryption.hash(data.cpf);
     const encryptedCpf = this.encryption.encrypt(data.cpf);
-    
-    const exists = await this.userRepo.findByCpf(cpfHash, tenantId);
-    if (exists) throw new BadRequestException('CPF já cadastrado nesta clínica.');
+    if (await this.userRepo.findByCpf(cpfHash, tenantId)) throw new BadRequestException('CPF já cadastrado nesta clínica.');
 
     const defaultPassword = crypto.randomBytes(8).toString('hex');
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
 
     const newUser = new User(
       crypto.randomUUID(), tenantId, data.roleId, data.nomeCompleto, encryptedCpf, data.email,
-      true, true,
-      data.dataNascimento ? new Date(data.dataNascimento) : null,
+      true, true, data.dataNascimento ? new Date(data.dataNascimento) : null,
       data.sexo || null, data.telefone || null, data.enderecoCompleto || null,
       data.dataAdmissao ? new Date(data.dataAdmissao) : null,
       new Date(), new Date(), null
@@ -36,13 +37,18 @@ export class UsersUseCases {
     return newUser;
   }
 
-  async findAll(tenantId: string, page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
-    const { data, total } = await this.userRepo.findAll(tenantId, skip, limit);
+  // 🔥 PAGINAÇÃO
+  async findAll(tenantId: string, query: QueryUsersDto) {
+    const { page, limit, search, roleId, isActive } = query;
+    const { skip, take } = buildPaginationQuery(page, limit);
+
+    const filters = { search, roleId, isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined };
+    const { data, total } = await this.userRepo.findAll(tenantId, skip, take, filters);
+    
     const decryptedData = data.map(user => ({
       ...user, cpf: this.encryption.decrypt(user.cpf)
     }));
-    return { data: decryptedData, total, page, limit };
+    return buildPaginatedResult(decryptedData, total, page, limit);
   }
 
   async findOne(id: string, tenantId: string): Promise<User> {
@@ -57,7 +63,6 @@ export class UsersUseCases {
 
     let encryptedCpf = user.cpf;
     let cpfHash = undefined;
-
     if (data.cpf) {
         encryptedCpf = this.encryption.encrypt(data.cpf);
         cpfHash = this.encryption.hash(data.cpf);
@@ -85,16 +90,13 @@ export class UsersUseCases {
     if (!authData) throw new NotFoundException('Usuário não encontrado.');
     
     const { user, passwordHash } = authData;
-
     const isPasswordValid = await bcrypt.compare(data.currentPassword, passwordHash);
-    
     if (!isPasswordValid) throw new BadRequestException('Senha atual incorreta.');
 
     const newHashedPassword = await bcrypt.hash(data.newPassword, 12);
     const updatedUser = new User(
        user.id, user.tenantId, user.roleId, user.nomeCompleto, user.cpf, user.email,
-       user.isActive, false,
-       user.dataNascimento, user.sexo, user.telefone, user.enderecoCompleto, user.dataAdmissao,
+       user.isActive, false, user.dataNascimento, user.sexo, user.telefone, user.enderecoCompleto, user.dataAdmissao,
        user.createdAt, new Date(), user.deletedAt
     );
     await this.userRepo.update(updatedUser, newHashedPassword);

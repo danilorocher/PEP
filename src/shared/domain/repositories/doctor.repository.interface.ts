@@ -4,7 +4,7 @@ export interface IDoctorRepository {
   findById(id: string, tenantId: string): Promise<Doctor | null>;
   findByCpf(cpfCriptografado: string, tenantId: string): Promise<Doctor | null>;
   findByCrm(crm: string, ufCrm: string, tenantId: string): Promise<Doctor | null>;
-  findAll(tenantId: string, skip: number, take: number, specialtyId?: string, status?: string): Promise<{ data: Doctor[]; total: number }>;
+  findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Doctor[]; total: number }>;
   save(doctor: Doctor): Promise<void>;
   update(doctor: Doctor): Promise<void>;
   softDelete(id: string, tenantId: string): Promise<void>;

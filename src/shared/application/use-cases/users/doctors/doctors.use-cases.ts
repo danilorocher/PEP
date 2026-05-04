@@ -5,6 +5,10 @@ import { EncryptionService } from '../../../../infrastructure/database/prisma/re
 import * as crypto from 'crypto';
 import { CreateDoctorDto, UpdateDoctorDto } from '../../../../../modules/doctors/dto/doctor.dto';
 
+// 🔥 Paginação
+import { QueryDoctorsDto } from '../../../../../modules/doctors/dto/query-doctors.dto';
+import { buildPaginationQuery, buildPaginatedResult } from '../../../../infrastructure/utils/prisma-pagination.util';
+
 @Injectable()
 export class DoctorsUseCases {
   constructor(
@@ -14,14 +18,8 @@ export class DoctorsUseCases {
 
   async create(tenantId: string, data: CreateDoctorDto): Promise<Doctor> {
     const encryptedCpf = this.encryption.encrypt(data.cpf);
-    if (await this.doctorRepo.findByCpf(encryptedCpf, tenantId)) {
-      throw new BadRequestException('CPF já cadastrado como médico nesta clínica.');
-    }
-    
-    if (await this.doctorRepo.findByCrm(data.crm, data.ufCrm, tenantId)) {
-      throw new BadRequestException(`CRM ${data.crm}/${data.ufCrm} já está cadastrado.`);
-    }
-
+    if (await this.doctorRepo.findByCpf(encryptedCpf, tenantId)) throw new BadRequestException('CPF já cadastrado como médico.');
+    if (await this.doctorRepo.findByCrm(data.crm, data.ufCrm, tenantId)) throw new BadRequestException(`CRM já cadastrado.`);
     const encryptedCns = data.cns ? this.encryption.encrypt(data.cns) : null;
 
     const newDoctor = new Doctor(
@@ -36,39 +34,39 @@ export class DoctorsUseCases {
     return newDoctor;
   }
 
-  async findAll(tenantId: string, page: number = 1, limit: number = 10, specialtyId?: string, status?: string) {
-    const skip = (page - 1) * limit;
-    const { data, total } = await this.doctorRepo.findAll(tenantId, skip, limit, specialtyId, status);
+  // 🔥 PAGINAÇÃO CORRIGIDA (Agrupando os filtros)
+  async findAll(tenantId: string, query: QueryDoctorsDto) {
+    const { page, limit, search, specialtyId, status } = query;
+    const { skip, take } = buildPaginationQuery(page, limit);
+
+    // Agrupa os filtros num único objeto
+    const filters = { search, specialtyId, status };
+
+    // Passa os 4 argumentos que a Interface IDoctorRepository exige
+    const { data, total } = await this.doctorRepo.findAll(tenantId, skip, take, filters);
     
     const decryptedData = data.map(doc => ({
       ...doc,
       cpf: this.encryption.decrypt(doc.cpf),
       cns: doc.cns ? this.encryption.decrypt(doc.cns) : null
     }));
-    return { data: decryptedData, total, page, limit };
+    return buildPaginatedResult(decryptedData, total, page, limit);
   }
 
   async findOne(id: string, tenantId: string): Promise<Doctor> {
     const doctor = await this.doctorRepo.findById(id, tenantId);
     if (!doctor) throw new NotFoundException('Médico não encontrado.');
-    return { 
-      ...doctor, 
-      cpf: this.encryption.decrypt(doctor.cpf),
-      cns: doctor.cns ? this.encryption.decrypt(doctor.cns) : null 
-    } as Doctor;
+    return { ...doctor, cpf: this.encryption.decrypt(doctor.cpf), cns: doctor.cns ? this.encryption.decrypt(doctor.cns) : null } as Doctor;
   }
 
   async update(id: string, tenantId: string, data: UpdateDoctorDto): Promise<void> {
     const doctor = await this.doctorRepo.findById(id, tenantId);
     if (!doctor) throw new NotFoundException('Médico não encontrado.');
-
     const encryptedCpf = data.cpf ? this.encryption.encrypt(data.cpf) : doctor.cpf;
     const encryptedCns = data.cns !== undefined ? (data.cns ? this.encryption.encrypt(data.cns) : null) : doctor.cns;
 
     if (data.crm && data.ufCrm && (data.crm !== doctor.crm || data.ufCrm !== doctor.ufCrm)) {
-      if (await this.doctorRepo.findByCrm(data.crm, data.ufCrm, tenantId)) {
-        throw new BadRequestException(`CRM ${data.crm}/${data.ufCrm} já está em uso.`);
-      }
+      if (await this.doctorRepo.findByCrm(data.crm, data.ufCrm, tenantId)) throw new BadRequestException(`CRM já está em uso.`);
     }
 
     const updatedDoctor = new Doctor(
@@ -81,7 +79,6 @@ export class DoctorsUseCases {
       doctor.assinaturaDigitalPath, data.status || doctor.status, doctor.createdAt, new Date(), doctor.deletedAt,
       data.specialties || doctor.specialties
     );
-
     await this.doctorRepo.update(updatedDoctor);
   }
 

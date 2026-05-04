@@ -44,15 +44,21 @@ export class PrismaDoctorRepository implements IDoctorRepository {
     return this.toDomain(record);
   }
 
-  async findAll(tenantId: string, skip: number, take: number, specialtyId?: string, status?: string): Promise<{ data: Doctor[]; total: number }> {
+  async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Doctor[]; total: number }> {
     const where: Prisma.DoctorWhereInput = { tenantId, deletedAt: null };
-    if (status) where.status = status as any;
-    if (specialtyId) {
-      where.specialties = { some: { specialtyId } };
+    if (filters?.status) where.status = filters.status as any;
+    if (filters?.specialtyId) {
+      where.specialties = { some: { specialtyId: filters.specialtyId } };
+    }
+    if (filters?.search) {
+      where.OR = [
+        { nomeCompleto: { contains: filters.search, mode: 'insensitive' } },
+        { crm: { contains: filters.search } }
+      ];
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.doctor.findMany({ where, skip, take, include: { specialties: true } }),
+      this.prisma.doctor.findMany({ where, skip, take, include: { specialties: true }, orderBy: { nomeCompleto: 'asc' } }),
       this.prisma.doctor.count({ where })
     ]);
     return { data: data.map(r => this.toDomain(r)), total };
@@ -83,8 +89,8 @@ export class PrismaDoctorRepository implements IDoctorRepository {
         registroSecundario: doctor.registroSecundario, assinaturaDigitalPath: doctor.assinaturaDigitalPath,
         status: doctor.status as any,
         specialties: {
-          deleteMany: {}, // Limpa as antigas
-          create: doctor.specialties.map(specialtyId => ({ specialtyId })) // Insere as novas
+          deleteMany: {},
+          create: doctor.specialties.map(specialtyId => ({ specialtyId }))
         }
       },
     });

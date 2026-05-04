@@ -5,7 +5,9 @@ import { PermissionsGuard } from '../../shared/guards/permissions.guard';
 import { RequirePermissions } from '../../shared/decorators/permissions.decorator';
 import { NursesUseCases } from '../../shared/application/use-cases/users/nurses/nurses.use-cases';
 import { CreateNurseDto, UpdateNurseDto } from './dto/nurse.dto';
-import type { TenantRequest } from '../../common/middlewares/tenant.middleware';
+import { TenantRequest } from '../../common/middlewares/tenant.middleware';
+import { QueryNursesDto } from './dto/query-nurses.dto';
+import { TransformResponse } from '../../shared/interceptors/transform.interceptor';
  
 @ApiTags('Nurses (Enfermeiros)')
 @ApiBearerAuth()
@@ -22,9 +24,10 @@ export class NursesController {
   }
  
   @Get()
+  @TransformResponse()
   @RequirePermissions({ module: 'sistema', action: 'administrar' })
-  findAll(@Req() req: TenantRequest, @Query('page') page: string, @Query('limit') limit: string) {
-    return this.nursesUseCases.findAll(req.tenant.id, Number(page) || 1, Number(limit) || 10);
+  findAll(@Req() req: TenantRequest, @Query() query: QueryNursesDto) {
+    return this.nursesUseCases.findAll(req.tenant.id, query);
   }
  
   @Get(':id')

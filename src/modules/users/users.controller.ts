@@ -6,6 +6,8 @@ import { RequirePermissions } from '../../shared/decorators/permissions.decorato
 import { UsersUseCases } from '../../shared/application/use-cases/users/users.use-cases';
 import { CreateUserDto, UpdateUserDto, ChangePasswordDto } from './dto/user.dto';
 import { TenantRequest } from '../../common/middlewares/tenant.middleware';
+import { QueryUsersDto } from './dto/query-users.dto';
+import { TransformResponse } from '../../shared/interceptors/transform.interceptor';
 
 @ApiTags('Users (Colaboradores e Acesso)')
 @ApiBearerAuth()
@@ -21,9 +23,10 @@ export class UsersController {
   }
 
   @Get()
+  @TransformResponse()
   @RequirePermissions({ module: 'sistema', action: 'administrar' })
-  findAll(@Req() req: TenantRequest, @Query('page') page: string, @Query('limit') limit: string) {
-    return this.usersUseCases.findAll(req.tenant.id, Number(page) || 1, Number(limit) || 10);
+  findAll(@Req() req: TenantRequest, @Query() query: QueryUsersDto) {
+    return this.usersUseCases.findAll(req.tenant.id, query);
   }
 
   @Get(':id')
@@ -34,7 +37,6 @@ export class UsersController {
 
   @Patch('me/change-password')
   changePassword(@Body() data: ChangePasswordDto, @Req() req: TenantRequest) {
-    // Qualquer usuário autenticado pode trocar a própria senha (sem RequirePermissions)
     const userId = (req as any).user.sub;
     return this.usersUseCases.changePassword(userId, req.tenant.id, data);
   }

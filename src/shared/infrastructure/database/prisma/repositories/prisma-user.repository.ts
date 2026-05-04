@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { IUserRepository, UserWithPassword } from '../../../../domain/repositories/user.repository.interface';
 import { User, Address } from '../../../../domain/entities/user.entity';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaUserRepository implements IUserRepository {
@@ -44,10 +45,20 @@ export class PrismaUserRepository implements IUserRepository {
     return this.toDomain(record);
   }
 
-  async findAll(tenantId: string, skip: number, take: number): Promise<{ data: User[]; total: number }> {
+  async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: User[]; total: number }> {
+    const where: Prisma.UserWhereInput = { tenantId, deletedAt: null };
+    if (filters?.isActive !== undefined) where.isActive = filters.isActive;
+    if (filters?.roleId) where.roleId = filters.roleId;
+    if (filters?.search) {
+      where.OR = [
+        { nomeCompleto: { contains: filters.search, mode: 'insensitive' } },
+        { email: { contains: filters.search, mode: 'insensitive' } }
+      ];
+    }
+
     const [data, total] = await Promise.all([
-      this.prisma.user.findMany({ where: { tenantId, deletedAt: null }, skip, take }),
-      this.prisma.user.count({ where: { tenantId, deletedAt: null } })
+      this.prisma.user.findMany({ where, skip, take, orderBy: { nomeCompleto: 'asc' } }),
+      this.prisma.user.count({ where })
     ]);
     return { data: data.map(r => this.toDomain(r)!), total };
   }

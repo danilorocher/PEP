@@ -3,9 +3,14 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../shared/guards/permissions.guard';
 import { RequirePermissions } from '../../shared/decorators/permissions.decorator';
+
+// 🔥 CAMINHO CORRIGIDO AQUI: Adicionado a pasta "users/" no caminho
 import { DoctorsUseCases } from '../../shared/application/use-cases/users/doctors/doctors.use-cases';
+
 import { CreateDoctorDto, UpdateDoctorDto } from './dto/doctor.dto';
-import type { TenantRequest } from '../../common/middlewares/tenant.middleware';
+import { TenantRequest } from '../../common/middlewares/tenant.middleware';
+import { QueryDoctorsDto } from './dto/query-doctors.dto';
+import { TransformResponse } from '../../shared/interceptors/transform.interceptor';
  
 @ApiTags('Doctors (Médicos)')
 @ApiBearerAuth()
@@ -21,15 +26,10 @@ export class DoctorsController {
   }
  
   @Get()
+  @TransformResponse()
   @RequirePermissions({ module: 'sistema', action: 'administrar' })
-  findAll(
-    @Req() req: TenantRequest,
-    @Query('page') page: string,
-    @Query('limit') limit: string,
-    @Query('specialtyId') specialtyId: string,
-    @Query('status') status: string,
-  ) {
-    return this.doctorsUseCases.findAll(req.tenant.id, Number(page) || 1, Number(limit) || 10, specialtyId, status);
+  findAll(@Req() req: TenantRequest, @Query() query: QueryDoctorsDto) {
+    return this.doctorsUseCases.findAll(req.tenant.id, query);
   }
  
   @Get(':id')

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { INurseRepository } from '../../../../domain/repositories/nurse.repository.interface';
 import { Nurse } from '../../../../domain/entities/nurse.entity';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaNurseRepository implements INurseRepository {
@@ -36,10 +37,21 @@ export class PrismaNurseRepository implements INurseRepository {
     return this.toDomain(record);
   }
 
-  async findAll(tenantId: string, skip: number, take: number): Promise<{ data: Nurse[]; total: number }> {
+  async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Nurse[]; total: number }> {
+    const where: Prisma.NurseWhereInput = { tenantId, deletedAt: null };
+    if (filters?.status) where.status = filters.status as any;
+    if (filters?.categoria) where.categoria = filters.categoria as any;
+    if (filters?.podePrescrever !== undefined) where.podePrescrever = filters.podePrescrever;
+    if (filters?.search) {
+      where.OR = [
+        { nomeCompleto: { contains: filters.search, mode: 'insensitive' } },
+        { coren: { contains: filters.search } }
+      ];
+    }
+
     const [data, total] = await Promise.all([
-      this.prisma.nurse.findMany({ where: { tenantId, deletedAt: null }, skip, take }),
-      this.prisma.nurse.count({ where: { tenantId, deletedAt: null } })
+      this.prisma.nurse.findMany({ where, skip, take, orderBy: { nomeCompleto: 'asc' } }),
+      this.prisma.nurse.count({ where })
     ]);
     return { data: data.map(r => this.toDomain(r)!), total };
   }
