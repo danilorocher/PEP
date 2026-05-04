@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Form, Input, Button, Row, Col, Select, Typography, message, Space, Checkbox } from 'antd';
+import { Card, Form, Input, Button, Row, Col, Select, message, Space, Checkbox } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -22,10 +22,12 @@ export const NurseFormPage = () => {
   const [loading, setLoading] = useState(false);
   const isEdit = !!id;
 
-  const { control, handleSubmit, reset } = useForm({
+  const { control: ctrl, handleSubmit, reset } = useForm({
     resolver: zodResolver(nurseSchema),
     defaultValues: { podePrescrever: false }
   });
+
+  const control = ctrl as any;
 
   useEffect(() => {
     if (isEdit) {

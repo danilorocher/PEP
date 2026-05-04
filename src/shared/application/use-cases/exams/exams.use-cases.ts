@@ -4,10 +4,15 @@ import { Exam } from '../../../domain/entities/exam.entity';
 import * as crypto from 'crypto';
 import { CreateExamDto, UpdateExamDto } from '../../../../modules/exams/dto/exam.dto';
 
+// 🔥 NOVA IMPORTAÇÃO: Serviço de Cache
+import { RedisService } from '../../../infrastructure/cache/redis.service';
+
 @Injectable()
 export class ExamsUseCases {
   constructor(
     @Inject(EXAM_REPOSITORY_TOKEN) private readonly examRepo: IExamRepository,
+    // 🔥 INJEÇÃO DO REDIS ADICIONADA AQUI
+    private readonly redisService: RedisService,
   ) {}
 
   async create(tenantId: string, data: CreateExamDto): Promise<Exam> {
@@ -19,10 +24,17 @@ export class ExamsUseCases {
     return this.examRepo.create(newExam);
   }
 
+  // 🔥 CACHE DE 60 SEGUNDOS APLICADO AQUI
   async findAll(tenantId: string, page: number, limit: number) {
     const skip = (page - 1) * limit;
-    const { data, total } = await this.examRepo.findAll(tenantId, skip, limit);
-    return { data, total, page, limit };
+    
+    // A chave do cache respeita a paginação para não misturar os resultados das páginas
+    const cacheKey = `tenant:${tenantId}:exams:all:page:${page}:limit:${limit}`;
+
+    return this.redisService.getOrSet(cacheKey, 60, async () => {
+      const { data, total } = await this.examRepo.findAll(tenantId, skip, limit);
+      return { data, total, page, limit };
+    });
   }
 
   async findOne(id: string, tenantId: string): Promise<Exam> {

@@ -6,13 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import dayjs from 'dayjs';
 import api from '../../../../shared/services/api';
-import { Can } from '../../../../shared/hooks/usePermission';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
 const reportSchema = z.object({
-  type: z.string().min(1, 'Selecione o tipo de relatÃ³rio'),
+  type: z.string().min(1, 'Selecione o tipo de relatório'),
   dateRange: z.any().optional(),
 });
 
@@ -37,21 +36,21 @@ export const ReportsPage = () => {
         const { status, result } = response.data;
 
         if (status === 'COMPLETED') {
-          clearInterval(pollingIntervalRef.current!);
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
           setReportData(result);
           setPolling(false);
-          message.success('RelatÃ³rio processado com sucesso!');
+          message.success('Relatório processado com sucesso!');
         } else if (status === 'FAILED') {
-          clearInterval(pollingIntervalRef.current!);
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
           setPolling(false);
-          message.error('Falha ao gerar o relatÃ³rio.');
+          message.error('Falha ao gerar o relatório.');
         }
       } catch (error) {
-        clearInterval(pollingIntervalRef.current!);
+        if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
         setPolling(false);
-        message.error('Erro ao verificar status do relatÃ³rio.');
+        message.error('Erro ao verificar status do relatório.');
       }
-    }, 3000); // Polling a cada 3 segundos
+    }, 3000); 
   };
 
   const onSubmit = async (data: ReportFormData) => {
@@ -70,14 +69,13 @@ export const ReportsPage = () => {
       const response = await api.post('/reports/generate', payload);
       
       if (response.data?.jobId) {
-        message.info('RelatÃ³rio em processamento. Aguarde...');
+        message.info('Relatório em processamento. Aguarde...');
         startPolling(response.data.jobId);
       } else {
-        // Fallback caso a API retorne sÃ­ncrono
         setReportData(response.data);
       }
     } catch (error: any) {
-      message.error(error.response?.data?.message || 'Erro ao solicitar relatÃ³rio');
+      message.error(error.response?.data?.message || 'Erro ao solicitar relatório');
     } finally {
       setLoading(false);
     }
@@ -92,7 +90,7 @@ export const ReportsPage = () => {
     const headers = Object.keys(reportData[0]).join(';');
     const rows = reportData.map(row => 
       Object.values(row).map(value => 
-        typeof value === 'object' ? `"${JSON.stringify(value).replace(/"/g, '""')}"` : `"${value}"`
+        typeof value === 'object' && value !== null ? `"${JSON.stringify(value).replace(/"/g, '""')}"` : `"${value}"`
       ).join(';')
     );
     
@@ -121,31 +119,31 @@ export const ReportsPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-        <Title level={2}>Central de RelatÃ³rios</Title>
+        <Title level={2}>Central de Relatórios</Title>
       </div>
 
       <Card style={{ marginBottom: 24 }}>
         <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
           <Row gutter={16}>
             <Col xs={24} md={10}>
-              <Form.Item label="Tipo de RelatÃ³rio" required validateStatus={errors.type ? 'error' : ''} help={errors.type?.message}>
+              <Form.Item label="Tipo de Relatório" required validateStatus={errors.type ? 'error' : ''} help={errors.type?.message}>
                 <Controller name="type" control={control} render={({ field }) => (
-                  <Select {...field} placeholder="Selecione o relatÃ³rio">
+                  <Select {...field} placeholder="Selecione o relatório">
                     <Select.Option value="PACIENTES_INTERNADOS">Pacientes Internados Atualmente</Select.Option>
-                    <Select.Option value="TAXA_OCUPACAO_LEITOS">Taxa de OcupaÃ§Ã£o de Leitos</Select.Option>
+                    <Select.Option value="TAXA_OCUPACAO_LEITOS">Taxa de Ocupação de Leitos</Select.Option>
                     <Select.Option value="PACIENTES_POR_ALA">Pacientes por Ala</Select.Option>
-                    <Select.Option value="HISTORICO_MEDICAMENTOS">HistÃ³rico de AdministraÃ§Ã£o de Medicamentos</Select.Option>
-                    <Select.Option value="ADMINISTRACAO_MEDICAMENTO_HORARIO">EstatÃ­sticas de MedicaÃ§Ã£o por HorÃ¡rio</Select.Option>
+                    <Select.Option value="HISTORICO_MEDICAMENTOS">Histórico de Administração de Medicamentos</Select.Option>
+                    <Select.Option value="ADMINISTRACAO_MEDICAMENTO_HORARIO">Estatísticas de Medicação por Horário</Select.Option>
                     <Select.Option value="EXAMES_REALIZADOS">Exames Realizados</Select.Option>
-                    <Select.Option value="TEMPO_MEDIO_INTERNACAO">Tempo MÃ©dio de InternaÃ§Ã£o</Select.Option>
+                    <Select.Option value="TEMPO_MEDIO_INTERNACAO">Tempo Médio de Internação</Select.Option>
                     <Select.Option value="AGENDA_DO_DIA">Agenda do Dia</Select.Option>
-                    <Select.Option value="FATURAMENTO_POR_CONVENIO">Faturamento por ConvÃªnio</Select.Option>
+                    <Select.Option value="FATURAMENTO_POR_CONVENIO">Faturamento por Convênio</Select.Option>
                   </Select>
                 )} />
               </Form.Item>
             </Col>
             <Col xs={24} md={10}>
-              <Form.Item label="PerÃ­odo" validateStatus={errors.dateRange ? 'error' : ''}>
+              <Form.Item label="Período" validateStatus={errors.dateRange ? 'error' : ''}>
                 <Controller name="dateRange" control={control} render={({ field }) => (
                   <RangePicker {...field} style={{ width: '100%' }} format="DD/MM/YYYY" />
                 )} />
@@ -164,13 +162,13 @@ export const ReportsPage = () => {
         <Card style={{ textAlign: 'center', padding: 40 }}>
           <Spin size="large" indicator={<FileSyncOutlined spin style={{ fontSize: 48 }} />} />
           <Title level={4} style={{ marginTop: 24 }}>Processando grandes volumes de dados...</Title>
-          <Text type="secondary">Esta operaÃ§Ã£o ocorre em background. Aguarde.</Text>
+          <Text type="secondary">Esta operação ocorre em background. Aguarde.</Text>
         </Card>
       )}
 
       {!polling && reportData && (
         <Card 
-          title="Resultado do RelatÃ³rio" 
+          title="Resultado do Relatório" 
           extra={
             <Button type="primary" icon={<FileExcelOutlined />} onClick={exportToCSV} style={{ backgroundColor: '#52c41a' }}>
               Exportar CSV

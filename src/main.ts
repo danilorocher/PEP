@@ -3,12 +3,13 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+// 🔥 NOVA IMPORTAÇÃO: Filtro Global de Exceções
+import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // --- CORREÇÃO FINAL DO CORS ---
-  // Configuramos de forma explícita para o navegador não bloquear a requisição.
   app.enableCors({
     origin: ['http://localhost:3001', 'http://127.0.0.1:3001'], 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
@@ -21,6 +22,10 @@ async function bootstrap() {
 
   // Validação Global
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  // 🔥 REGISTRO DO FILTRO GLOBAL: Padronização de erros profissional
+  // Colocamos aqui para que ele capture todos os erros da aplicação
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // Configuração Swagger
   const config = new DocumentBuilder()

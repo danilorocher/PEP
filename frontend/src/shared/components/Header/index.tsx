@@ -11,7 +11,7 @@ export const Header = () => {
   const { subdomain } = useTenantStore();
   const { token } = theme.useToken();
 
-  const userMenuItems = [
+  const userMenuItems: any[] = [
     {
       key: 'profile',
       label: 'Meu Perfil',
@@ -53,8 +53,10 @@ export const Header = () => {
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
           <Space style={{ cursor: 'pointer' }}>
             <div style={{ textAlign: 'right', lineHeight: '1.2' }}>
-              <div style={{ fontWeight: 'bold' }}>{user?.name}</div>
-              <Text type="secondary" style={{ fontSize: "12px" }}>{user?.role}</Text>
+              <div style={{ fontWeight: 'bold' }}>{user?.name || user?.nomeCompleto}</div>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                {typeof user?.role === 'string' ? user.role : (user?.role as any)?.nome ?? ''}
+              </Text>
             </div>
             <Avatar icon={<UserOutlined />} style={{ backgroundColor: token.colorPrimary }} />
           </Space>

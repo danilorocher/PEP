@@ -50,7 +50,7 @@ export const BillingItemsModal = ({ visible, guide, onCancel }: BillingItemsModa
             {record.status}
           </Tag>
           {record.status === 'GLOSADO' && record.motivoGlosa && (
-            <Text type="danger" size="small" style={{ fontSize: '12px' }}>
+            <Text type="danger" style={{ fontSize: '12px' }}>
               Motivo: {record.motivoGlosa}
             </Text>
           )}

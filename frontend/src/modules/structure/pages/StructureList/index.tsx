@@ -8,12 +8,11 @@ const { Option } = Select;
 
 export const StructureListPage = () => {
   const [loading, setLoading] = useState(false);
-  const [wards, setWards] = useState([]); // Alas
-  const [beds, setBeds] = useState([]);   // Leitos
+  const [wards, setWards] = useState<any[]>([]); // Alas
+  const [beds, setBeds] = useState<any[]>([]);   // Leitos
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('1');
 
-  // Busca dados das Alas e Leitos
   const fetchStructure = useCallback(async () => {
     setLoading(true);
     try {
@@ -35,7 +34,6 @@ export const StructureListPage = () => {
     fetchStructure();
   }, [fetchStructure]);
 
-  // Configuração das Colunas de Alas
   const wardColumns = [
     {
       title: 'Nome da Ala / Setor',
@@ -67,7 +65,6 @@ export const StructureListPage = () => {
     }
   ];
 
-  // Configuração das Colunas de Leitos (O "Mapa de Leitos")
   const bedColumns = [
     {
       title: 'Leito',
@@ -124,7 +121,6 @@ export const StructureListPage = () => {
         </Button>
       </div>
 
-      {/* Cards de Resumo Rápido */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
           <Card bordered={false}>
@@ -171,7 +167,6 @@ export const StructureListPage = () => {
         </Tabs>
       </Card>
 
-      {/* Modal Simples de Cadastro */}
       <Modal 
         title={activeTab === '1' ? "Cadastrar Nova Ala" : "Cadastrar Novo Leito"} 
         open={isModalVisible} 

@@ -10,9 +10,10 @@ import {
   SolutionOutlined,
   SettingOutlined,
   AuditOutlined,
-  BankOutlined, // <-- Novo ícone para Unidades/Empresa
-  ScissorOutlined, // <-- Ícone para o Centro Cirúrgico
-  WalletOutlined // <-- Ícone para a Conta Hospitalar / Faturamento Avançado
+  BankOutlined,
+  ScissorOutlined,
+  WalletOutlined,
+  HeartOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -54,17 +55,20 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       label: 'Internações',
     },
     {
+      key: '/assistance',
+      icon: <HeartOutlined />,
+      label: 'Assistência ao Paciente',
+    },
+    {
       key: '/medication',
       icon: <MedicineBoxOutlined />,
       label: 'Medicações',
     },
-    // Módulo de Farmácia Hospitalar
     {
       key: '/pharmacy',
       icon: <MedicineBoxOutlined />,
       label: 'Farmácia',
     },
-    // Módulo de Centro Cirúrgico
     {
       key: '/surgical-center',
       icon: <ScissorOutlined />,
@@ -75,17 +79,25 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       icon: <FileSearchOutlined />,
       label: 'Exames',
     },
+    
+    // 🔥 FATURAMENTO AGRUPADO (SUBMENU)
     {
-      key: '/billing',
+      key: 'billing-group',
       icon: <ContainerOutlined />,
-      label: 'Guias TISS',
+      label: 'Faturamento',
+      children: [
+        { 
+          key: '/hospital-billing', 
+          icon: <WalletOutlined />, 
+          label: 'Conta & Faturação' 
+        },
+        { 
+          key: '/billing', 
+          label: 'Guias TISS' 
+        },
+      ]
     },
-    // 🔥 NOVA OPÇÃO ADICIONADA AQUI: Conta Hospitalar / DRG
-    {
-      key: '/hospital-billing',
-      icon: <WalletOutlined />,
-      label: 'Conta & Faturação',
-    },
+
     {
       key: '/reports',
       icon: <AuditOutlined />,
@@ -120,7 +132,8 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
         selectedKeys={[location.pathname]}
         items={menuItems}
         onClick={({ key }) => {
-          if (key !== 'admin-group') {
+          // 🔥 Evita tentar navegar ao clicar nos "Pai" dos submenus
+          if (key !== 'admin-group' && key !== 'billing-group') {
             navigate(key);
           }
         }}

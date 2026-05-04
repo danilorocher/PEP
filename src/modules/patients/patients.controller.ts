@@ -7,6 +7,10 @@ import { PatientsUseCases } from '../../shared/application/use-cases/patients/pa
 import { CreatePatientDto, UpdatePatientDto } from './dto/patient.dto';
 import { TenantRequest } from '../../common/middlewares/tenant.middleware';
 
+// 🔥 NOVAS IMPORTAÇÕES: DTO Tipado e Decorator de Transformação
+import { QueryPatientsDto } from './dto/query-patients.dto';
+import { TransformResponse } from '../../shared/interceptors/transform.interceptor';
+
 @ApiTags('Patients (Pacientes)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -21,17 +25,15 @@ export class PatientsController {
     return this.patientsUseCases.create(req.tenant.id, createPatientDto);
   }
 
+  // 🔥 ROTA REFATORADA: O @TransformResponse() engloba a paginação no novo formato
   @Get()
+  @TransformResponse()
   @RequirePermissions({ module: 'pacientes', action: 'visualizar' })
   findAll(
     @Req() req: TenantRequest,
-    @Query('page') page: string,
-    @Query('limit') limit: string,
-    @Query('nomeCompleto') nomeCompleto?: string,
-    @Query('status') status?: string,
-    @Query('convenioId') convenioId?: string
+    @Query() query: QueryPatientsDto // Substituímos todos aqueles @Query pelo nosso DTO tipado
   ) {
-    return this.patientsUseCases.findAll(req.tenant.id, Number(page) || 1, Number(limit) || 10, { nomeCompleto, status, convenioId });
+    return this.patientsUseCases.findAll(req.tenant.id, query);
   }
 
   @Get(':id')

@@ -6,11 +6,18 @@ import { EncryptionService } from '../../../infrastructure/database/prisma/repos
 import * as crypto from 'crypto';
 import { CreateClinicalEvolutionDto, UpdateClinicalEvolutionDto } from '../../../../modules/medical-records/dto/clinical-evolution.dto';
 
+// 🔥 IMPORTAÇÕES ADICIONADAS PARA O CACHE E CID-10
+import { RedisService } from '../../../infrastructure/cache/redis.service';
+import { PrismaService } from '../../../infrastructure/database/prisma/repositories/prisma.service';
+
 @Injectable()
 export class MedicalRecordsUseCases {
   constructor(
     @Inject(MEDICAL_RECORD_REPOSITORY_TOKEN) private readonly recordRepo: IMedicalRecordRepository,
     private readonly encryption: EncryptionService,
+    // 🔥 SERVIÇOS INJETADOS AQUI:
+    private readonly prisma: PrismaService,
+    private readonly redisService: RedisService,
   ) {}
 
   async getById(id: string, tenantId: string, userId: string, ip: string, userAgent: string): Promise<MedicalRecord> {
@@ -116,5 +123,16 @@ export class MedicalRecordsUseCases {
             descricao: this.encryption.decrypt(h.dadosSnapshot.descricao)
         }
     }));
+  }
+
+  // 🔥 NOVO MÉTODO ADICIONADO: Catálogo de CID-10 com Cache de 24h
+  async listCid10() {
+    const cacheKey = 'global:cid10:all';
+    
+    return this.redisService.getOrSet(cacheKey, 86400, async () => {
+      return this.prisma.cid10.findMany({
+        orderBy: { codigo: 'asc' }
+      });
+    });
   }
 }

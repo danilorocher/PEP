@@ -4,10 +4,15 @@ import { Bed } from '../../../domain/entities/bed.entity';
 import * as crypto from 'crypto';
 import { CreateBedDto, UpdateBedDto } from '../../../../modules/beds/dto/bed.dto';
 
+// 🔥 NOVA IMPORTAÇÃO: Serviço de Cache
+import { RedisService } from '../../../infrastructure/cache/redis.service';
+
 @Injectable()
 export class BedsUseCases {
   constructor(
     @Inject(BED_REPOSITORY_TOKEN) private readonly bedRepo: IBedRepository,
+    // 🔥 INJEÇÃO DO REDIS ADICIONADA AQUI
+    private readonly redisService: RedisService,
   ) {}
 
   async create(tenantId: string, data: CreateBedDto): Promise<Bed> {
@@ -18,13 +23,23 @@ export class BedsUseCases {
       crypto.randomUUID(), tenantId, data.wardId, data.numero, data.tipo,
       data.status || 'LIVRE', new Date(), new Date(), null
     );
-    return this.bedRepo.create(newBed);
+    const createdBed = await this.bedRepo.create(newBed);
+
+    // 🔥 Invalida o cache para atualizar a tela do hospital na hora
+    await this.redisService.invalidate(`tenant:${tenantId}:beds:all:page:1:limit:10`);
+
+    return createdBed;
   }
 
+  // 🔥 CACHE DE 30 SEGUNDOS APLICADO AQUI
   async findAll(tenantId: string, page: number = 1, limit: number = 10) {
     const skip = (page - 1) * limit;
-    const { data, total } = await this.bedRepo.findAll(tenantId, skip, limit);
-    return { data, total, page, limit };
+    const cacheKey = `tenant:${tenantId}:beds:all:page:${page}:limit:${limit}`;
+
+    return this.redisService.getOrSet(cacheKey, 30, async () => {
+      const { data, total } = await this.bedRepo.findAll(tenantId, skip, limit);
+      return { data, total, page, limit };
+    });
   }
 
   async findAvailable(tenantId: string, tipo?: string, wardId?: string): Promise<Bed[]> {
@@ -50,10 +65,16 @@ export class BedsUseCases {
       data.tipo || bed.tipo, data.status || bed.status, bed.createdAt, new Date(), bed.deletedAt
     );
     await this.bedRepo.update(updatedBed);
+
+    // 🔥 Invalida o cache (ex: quando enfermagem muda para LIMPEZA)
+    await this.redisService.invalidate(`tenant:${tenantId}:beds:all:page:1:limit:10`);
   }
 
   async remove(id: string, tenantId: string): Promise<void> {
     await this.findOne(id, tenantId);
     await this.bedRepo.softDelete(id, tenantId);
+
+    // 🔥 Invalida o cache
+    await this.redisService.invalidate(`tenant:${tenantId}:beds:all:page:1:limit:10`);
   }
 }

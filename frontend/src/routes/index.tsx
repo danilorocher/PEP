@@ -31,6 +31,9 @@ import { SurgicalDashboardPage } from '../modules/surgical-center/pages/Surgical
 // 🔥 NOVA IMPORTAÇÃO: Módulo de Faturamento Avançado / Conta Hospitalar
 import { HospitalBillingDashboard } from '../modules/hospital-billing/pages/HospitalBillingDashboard';
 
+// 🔥 NOVA IMPORTAÇÃO: Módulo de Assistência (Dashboard Clínico)
+import { ClinicalDashboard as ClinicalDashboardPage } from '../modules/assistance/components/ClinicalDashboard';
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -86,6 +89,9 @@ const AppRoutes = () => {
 
         {/* 🔥 NOVA ROTA: Módulo de Centro Cirúrgico */}
         <Route path="/surgical-center" element={<MainLayout><SurgicalDashboardPage /></MainLayout>} />
+
+        {/* 🔥 NOVA ROTA: Módulo de Assistência ao Paciente */}
+        <Route path="/assistance" element={<MainLayout><ClinicalDashboardPage data={[]} /></MainLayout>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -95,17 +95,17 @@ export const PatientFormPage = () => {
         <Card title="Dados Identificadores" bordered={false}>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Nome Completo" required validateStatus={errors.nomeCompleto ? 'error' : ''} help={errors.nomeCompleto?.message}>
+              <Form.Item label="Nome Completo" required validateStatus={errors.nomeCompleto ? 'error' : ''} help={errors.nomeCompleto?.message as string}>
                 <Controller name="nomeCompleto" control={control} render={({ field }) => <Input {...field} />} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="CPF (Apenas números)" required validateStatus={errors.cpf ? 'error' : ''} help={errors.cpf?.message}>
+              <Form.Item label="CPF (Apenas números)" required validateStatus={errors.cpf ? 'error' : ''} help={errors.cpf?.message as string}>
                 <Controller name="cpf" control={control} render={({ field }) => <Input {...field} maxLength={11} disabled={isEdit} />} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item label="CNS" validateStatus={errors.cns ? 'error' : ''} help={errors.cns?.message}>
+              <Form.Item label="CNS" validateStatus={errors.cns ? 'error' : ''} help={errors.cns?.message as string}>
                 <Controller name="cns" control={control} render={({ field }) => <Input {...field} maxLength={15} />} />
               </Form.Item>
             </Col>
@@ -113,7 +113,7 @@ export const PatientFormPage = () => {
 
           <Row gutter={16}>
             <Col span={6}>
-              <Form.Item label="Data de Nascimento" required validateStatus={errors.dataNascimento ? 'error' : ''} help={errors.dataNascimento?.message}>
+              <Form.Item label="Data de Nascimento" required validateStatus={errors.dataNascimento ? 'error' : ''} help={errors.dataNascimento?.message as string}>
                 <Controller name="dataNascimento" control={control} render={({ field }) => <DatePicker {...field} style={{ width: '100%' }} format="DD/MM/YYYY" />} />
               </Form.Item>
             </Col>

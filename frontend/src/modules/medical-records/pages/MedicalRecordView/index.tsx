@@ -17,11 +17,10 @@ import { EvolutionFormModal } from '../../components/EvolutionFormModal';
 import { EvolutionHistoryModal } from '../../components/EvolutionHistoryModal';
 import { PrescriptionList } from '../../../prescriptions/components/PrescriptionList';
 
-// Importações do Módulo de Assistência Clínica
 import { VitalSigns } from '../../../assistance/components/VitalSigns';
 import { FluidBalance } from '../../../assistance/components/FluidBalance';
 import { ClinicalDashboard } from '../../../assistance/components/ClinicalDashboard';
-import { RiskAssessments } from '../../../assistance/components/RiskAssessments'; // 🔥 Nova Importação
+import { RiskAssessments } from '../../../assistance/components/RiskAssessments'; 
 
 const { Title, Text } = Typography;
 
@@ -35,7 +34,7 @@ export const MedicalRecordViewPage = () => {
   const [vitalHistory, setVitalHistory] = useState<any[]>([]);
 
   const [formModal, setFormModal] = useState({ visible: false, data: null });
-  const [historyModal, setHistoryModal] = useState({ visible: false, id: null });
+  const [historyModal, setHistoryModal] = useState<{ visible: boolean; id: string | null }>({ visible: false, id: null });
 
   const fetchRecordData = useCallback(async () => {
     setLoading(true);
@@ -103,9 +102,8 @@ export const MedicalRecordViewPage = () => {
              <ClinicalDashboard data={vitalHistory} />
           </Card>
           
-          {/* Módulos de Enfermagem/Assistência */}
           <VitalSigns patientId={patientId!} hospitalizationId={record?.hospitalizationId} />
-          <RiskAssessments patientId={patientId!} hospitalizationId={record?.hospitalizationId} /> {/* 🔥 Inserido Aqui */}
+          <RiskAssessments patientId={patientId!} hospitalizationId={record?.hospitalizationId} />
           <FluidBalance patientId={patientId!} hospitalizationId={record?.hospitalizationId} />
         </Space>
       )

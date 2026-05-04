@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, InputNumber, Select, Row, Col, Space, message, Card, Tag, Typography, Divider } from 'antd';
-import { PlusOutlined, dropDownOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { Table, Button, Modal, Form, InputNumber, Select, Row, Col, Space, message, Card, Tag, Typography, Divider, Input } from 'antd';
+import { PlusOutlined, DownOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { fluidItemSchema } from '../../schemas/assistance.schema';
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export const FluidBalance: React.FC<Props> = ({ patientId, hospitalizationId }) => {
-  const [balances, setBalances] = useState([]);
+  const [balances, setBalances] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ visible: false, type: 'ENTRY' as 'ENTRY' | 'OUTPUT', balanceId: '' });
 
@@ -71,7 +71,7 @@ export const FluidBalance: React.FC<Props> = ({ patientId, hospitalizationId }) 
     { title: 'Referência', dataIndex: 'dataHoraReferencia', render: (val: string) => dayjs(val).format('DD/MM/YYYY') },
     { title: 'Total Entradas', dataIndex: 'totalInput', render: (val: number) => <Text type="success">{val} ml</Text> },
     { title: 'Total Saídas', dataIndex: 'totalOutput', render: (val: number) => <Text type="danger">{val} ml</Text> },
-    { title: 'Balanço Final', dataIndex: 'balance', render: (val: number) => <Text strong color={val >= 0 ? 'blue' : 'volcano'}>{val} ml</Text> },
+    { title: 'Balanço Final', dataIndex: 'balance', render: (val: number) => <Text strong style={{ color: val >= 0 ? '#1890ff' : '#cf1322' }}>{val} ml</Text> },
     { title: 'Status', dataIndex: 'status', render: (s: string) => <Tag color={s === 'EM_ANDAMENTO' ? 'processing' : 'default'}>{s}</Tag> },
     {
       title: 'Ações',

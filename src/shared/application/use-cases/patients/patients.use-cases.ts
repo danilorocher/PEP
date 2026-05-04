@@ -6,6 +6,10 @@ import { isValidCPF, isValidCNS } from '../../../utils/validators';
 import * as crypto from 'crypto';
 import { CreatePatientDto, UpdatePatientDto } from '../../../../modules/patients/dto/patient.dto';
 
+// 🔥 NOVAS IMPORTAÇÕES DE PAGINAÇÃO
+import { QueryPatientsDto } from '../../../../modules/patients/dto/query-patients.dto';
+import { buildPaginationQuery, buildPaginatedResult } from '../../../infrastructure/utils/prisma-pagination.util';
+
 @Injectable()
 export class PatientsUseCases {
   constructor(
@@ -41,16 +45,29 @@ export class PatientsUseCases {
     return this.patientRepo.createWithMedicalRecord(newPatient, medicalRecordNumero, cpfHash, cnsHash);
   }
 
-  async findAll(tenantId: string, page: number = 1, limit: number = 10, filter?: any) {
-    const skip = (page - 1) * limit;
-    const { data, total } = await this.patientRepo.findAll(tenantId, skip, limit, filter);
+  // 🔥 MÉTODO REFEITO UTILIZANDO OS UTILITÁRIOS UNIVERSAIS DE PAGINAÇÃO
+  async findAll(tenantId: string, query: QueryPatientsDto) {
+    const { page, limit, search, nome, cpf, convenioId, status } = query;
+    const { skip, take } = buildPaginationQuery(page, limit);
+
+    // Consolidando os filtros de forma limpa
+    const filter = {
+      nomeCompleto: nome || search, // Suporta tanto busca específica quanto a barra global de pesquisa
+      cpf,
+      convenioId,
+      status
+    };
+
+    const { data, total } = await this.patientRepo.findAll(tenantId, skip, take, filter);
     
     const decryptedData = data.map(patient => ({
       ...patient,
       cpf: this.encryption.decrypt(patient.cpf),
       cns: patient.cns ? this.encryption.decrypt(patient.cns) : null
     }));
-    return { data: decryptedData, total, page, limit };
+
+    // Retorna no formato da Interface PaginatedResult<T>
+    return buildPaginatedResult(decryptedData, total, page, limit);
   }
 
   async findOne(id: string, tenantId: string): Promise<Patient> {

@@ -9,6 +9,8 @@ import { PrismaModule } from './shared/infrastructure/database/prisma.module';
 import { TenantMiddleware } from './common/middlewares/tenant.middleware';
 import { TenantThrottlerGuard } from './common/guards/tenant-throttler.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
+// 🔥 NOVA IMPORTAÇÃO: Interceptor de Request ID para rastreabilidade
+import { RequestIdInterceptor } from './shared/interceptors/request-id.interceptor';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -36,6 +38,7 @@ import { PharmacyModule } from './modules/pharmacy/pharmacy.module';
 import { SurgicalCenterModule } from './modules/surgical-center/surgical-center.module';
 // 🔥 NOVA IMPORTAÇÃO: MÓDULO DE FATURAMENTO AVANÇADO (CONTA DO PACIENTE)
 import { HospitalBillingModule } from './modules/hospital-billing/hospital-billing.module';
+import { CacheModule } from './shared/infrastructure/cache/cache.module'; // 🔥 IMPORTAÇÃO DO CACHE
 
 @Module({
   imports: [
@@ -74,6 +77,7 @@ import { HospitalBillingModule } from './modules/hospital-billing/hospital-billi
     }),
 
     PrismaModule,
+    CacheModule, // 🔥 ADICIONADO AQUI: Agora todo o sistema reconhece o RedisService!
 
     AuthModule,
     UsersModule,
@@ -107,6 +111,11 @@ import { HospitalBillingModule } from './modules/hospital-billing/hospital-billi
     {
       provide: APP_GUARD,
       useClass: TenantThrottlerGuard,
+    },
+    // 🔥 NOVO INTERCEPTOR GLOBAL: Rastreabilidade (Request ID)
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestIdInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,
