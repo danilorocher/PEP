@@ -22,6 +22,8 @@ export interface LoginResponse {
 
 @Injectable()
 export class LoginUseCase {
+  private readonly MASTER_ADMIN_EMAIL = 'admin@pep.com';
+
   constructor(
     @Inject(USER_REPOSITORY_TOKEN)
     private readonly userRepository: IUserRepository,
@@ -32,42 +34,73 @@ export class LoginUseCase {
   ) {}
 
   async execute(tenantId: string, ip: string, data: LoginDto): Promise<LoginResponse> {
-    // 1. Busca o utilizador no Tenant atual (pelo subdomínio)
-    const authData = await this.userRepository.findAuthUserByEmail(data.email, tenantId);
+    
+    // 🚀 BUSCA GLOBAL: Independentemente do hospital atual, buscamos a identidade central do usuário
+    const userAccounts = await this.prisma.user.findMany({
+      where: { email: data.email, isActive: true, deletedAt: null },
+      include: {
+        tenant: { select: { id: true, name: true, cnpj: true, subdomain: true } },
+        role: { select: { permissoes: true } }
+      }
+    });
 
-    if (!authData || !authData.user.isActive) {
-      throw new UnauthorizedException('Credenciais inválidas para esta unidade.');
+    if (userAccounts.length === 0) {
+      throw new UnauthorizedException('Credenciais inválidas ou usuário inativo.');
     }
 
-    const { user, passwordHash } = authData;
-    const isPasswordValid = await bcrypt.compare(data.password, passwordHash);
+    // Como as contas são unificadas pelo e-mail/CPF, validamos a senha do registro principal
+    const mainAccount = userAccounts[0];
+    const isPasswordValid = await bcrypt.compare(data.password, mainAccount.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 
-    // 2. BUSCA GLOBAL: Encontra todos os hospitais onde este e-mail existe
-    const userAccounts = await this.prisma.user.findMany({
-      where: { email: data.email, isActive: true, deletedAt: null },
-      include: {
-        tenant: { select: { id: true, name: true, cnpj: true, subdomain: true } },
-        role: { select: { permissoes: true } } // Pega as permissões do cargo
-      }
-    });
+    let units = [];
+    let userPermissions = {};
+    let currentAccount = mainAccount;
 
-    // Mapeia para o formato que o Frontend espera (units)
-    const units = userAccounts.map(acc => ({
-      id: acc.tenant.id,
-      nomeFantasia: acc.tenant.name,
-      cnpj: acc.tenant.cnpj,
-      subdomain: acc.tenant.subdomain
-    }));
+    // 🔥 LÓGICA MASTER ADMIN: Se for o admin@pep.com, ele vê TODOS os hospitais do banco
+    if (data.email === this.MASTER_ADMIN_EMAIL) {
+      const allTenants = await this.prisma.tenant.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, cnpj: true, subdomain: true }
+      });
+      units = allTenants.map(t => ({
+        id: t.id,
+        nomeFantasia: t.name,
+        cnpj: t.cnpj,
+        subdomain: t.subdomain
+      }));
+      // Concede permissão total (*) em todos os módulos para o front-end
+      userPermissions = { "*": { "*": true } }; 
+    } else {
+      // Lógica normal para os outros usuários
+      units = userAccounts.map(acc => ({
+        id: acc.tenant.id,
+        nomeFantasia: acc.tenant.name,
+        cnpj: acc.tenant.cnpj,
+        subdomain: acc.tenant.subdomain
+      }));
 
-    // 🔥 CORREÇÃO: Extraímos as permissões diretamente da busca do Prisma para o hospital atual
-    const currentAccount = userAccounts.find(acc => acc.tenant.id === tenantId);
-    const userPermissions = currentAccount?.role?.permissoes || {};
+      const isGlobalAuth = tenantId === 'GLOBAL_AUTH' || !tenantId;
+      currentAccount = isGlobalAuth 
+        ? mainAccount 
+        : (userAccounts.find(acc => acc.tenant.id === tenantId) || mainAccount);
 
-    const payload = { sub: user.id, email: user.email, role: user.roleId, tenantId };
+      userPermissions = currentAccount.role?.permissoes || {};
+    }
+
+    // Determina o contexto de banco de dados
+    const finalTenantId = (tenantId === 'GLOBAL_AUTH' || !tenantId) ? mainAccount.tenantId : tenantId;
+
+    // Gera os Tokens
+    const payload = { 
+      sub: mainAccount.id, 
+      email: mainAccount.email, 
+      role: data.email === this.MASTER_ADMIN_EMAIL ? 'MASTER_ADMIN' : currentAccount.roleId, 
+      tenantId: finalTenantId 
+    };
     
     const accessToken = this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
@@ -79,19 +112,19 @@ export class LoginUseCase {
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') as any,
     });
 
-    await this.redisService.setRefreshToken(user.id, refreshToken, 604800);
+    await this.redisService.setRefreshToken(mainAccount.id, refreshToken, 604800);
 
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user.id,
-        name: user.nomeCompleto,
-        role: user.roleId,
-        mustChangePassword: user.mustChangePassword,
+        id: mainAccount.id,
+        name: mainAccount.nomeCompleto,
+        role: data.email === this.MASTER_ADMIN_EMAIL ? 'MASTER_ADMIN' : currentAccount.roleId,
+        mustChangePassword: mainAccount.mustChangePassword,
       },
       units, 
-      permissions: userPermissions // 🔥 Variavel corrigida que não quebra o TypeScript
+      permissions: userPermissions
     };
   }
 }

@@ -9,9 +9,10 @@ import { GlobalExceptionFilter } from './shared/filters/global-exception.filter'
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // --- CORREÇÃO FINAL DO CORS ---
+  // --- CORREÇÃO FINAL DO CORS PARA ACESSO EM REDE ---
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://127.0.0.1:3001'], 
+    // 🔥 ADICIONADO: 'http://192.168.8.88:3001' para permitir que o Frontend em outro PC acesse esta API
+    origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://192.168.8.88:3001'], 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'x-tenant-subdomain'],
@@ -38,7 +39,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Escutando na porta 3000 em todas as interfaces
+  // Escutando na porta 3000 em todas as interfaces (0.0.0.0)
   await app.listen(3000, '0.0.0.0');
   
   console.log(`🚀 Backend rodando em: http://localhost:3000`);

@@ -3,8 +3,6 @@ import { Form, Input, Button, Card, Typography, message, Modal, List, Avatar } f
 import { MailOutlined, LockOutlined, LoginOutlined, BankOutlined, RightOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../shared/services/api';
-
-// IMPORTAÇÃO DA FECHADURA CORRETA DO SEU SISTEMA
 import { useAuthStore } from '../../../../store/useAuthStore';
 
 const { Title, Text } = Typography;
@@ -14,68 +12,72 @@ export const LoginPage = () => {
   const [unitSelectionModal, setUnitSelectionModal] = useState(false);
   const [availableUnits, setAvailableUnits] = useState<any[]>([]);
   
-  // Guardando temporariamente os dados para caso ele tenha múltiplas unidades
-  const [tempAuthData, setTempAuthData] = useState<{token: string, user: any, permissions: any} | null>(null);
+  // 🔥 MÁGICA: Guardar as credenciais digitadas para o "Duplo Check-in"
+  const [formValues, setFormValues] = useState<any>(null);
   
   const navigate = useNavigate();
-  
-  // PEGANDO A FUNÇÃO DE SALVAR DO SEU STORE
   const setAuth = useAuthStore((state) => state.setAuth);
 
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
+      // 1. Limpa o cache antigo para garantir que a busca inicial seja GLOBAL
+      localStorage.removeItem('@PEP:unit');
+
       const response = await api.post('/auth/login', {
         email: values.email, 
         password: values.password
       });
 
-      // O seu backend pode estar retornando 'token' ou 'accessToken' dependendo de como foi feito.
-      // Vamos cobrir ambas as opções para garantir!
       const token = response.data.accessToken || response.data.token;
       const { units, user, permissions } = response.data;
 
-      // Se o usuário só trabalha em UMA unidade, entra direto!
-      if (units && units.length === 1) {
-        handleSelectUnit(units[0], token, user, permissions);
-      } 
-      // Se ele trabalha em MAIS DE UMA unidade
-      else if (units && units.length > 1) {
+      if (units && units.length > 1) {
+        // Se trabalha em mais de 1 unidade, guarda os dados do formulário e abre o Modal
         setAvailableUnits(units);
-        setTempAuthData({ token, user, permissions }); // Guarda para usar após o clique do modal
+        setFormValues(values); // 👈 Guardamos o e-mail e senha aqui!
         setUnitSelectionModal(true);
-      } 
-      else {
-        // Fallback: Entra normal (para o caso do backend não mandar units)
-        // A MÁGICA ACONTECE AQUI: Usando o seu Store do Zustand!
+      } else {
+        if (units && units.length === 1) {
+          localStorage.setItem('@PEP:unit', JSON.stringify(units[0]));
+        }
         setAuth(user || {}, token, permissions || {});
         message.success('Bem-vindo ao sistema!');
-        navigate('/dashboard'); // Agora o React Router te deixa passar suavemente!
+        navigate('/dashboard');
       }
 
     } catch (error: any) {
       console.error(error);
       const errorMsg = error.response?.data?.message;
-      if (Array.isArray(errorMsg)) {
-        message.error(errorMsg[0]);
-      } else {
-        message.error(errorMsg || 'Usuário ou senha incorretos.');
-      }
+      message.error(Array.isArray(errorMsg) ? errorMsg[0] : (errorMsg || 'Usuário ou senha incorretos.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectUnit = (unit: any, token: string, user: any, permissions: any) => {
-    // A unidade nós mantemos no localStorage para não bagunçar o seu store de autenticação
-    localStorage.setItem('@PEP:unit', JSON.stringify(unit));
-    
-    // Passamos os dados para o Zustand fazer o trabalho dele
-    setAuth(user || {}, token, permissions || {});
-    
-    setUnitSelectionModal(false);
-    message.success(`Acessando: ${unit.nomeFantasia || 'Unidade'}`);
-    navigate('/dashboard');
+// 🔥 MÁGICA: O Duplo Check-in Silencioso para buscar o Token correto da Unidade
+  const handleSelectUnit = async (unit: any) => {
+    try {
+      // 1. Dizemos ao navegador qual é o hospital (o api.ts vai ler isto)
+      localStorage.setItem('@PEP:unit', JSON.stringify(unit));
+      
+      // 2. Refazemos o login silenciosamente usando os dados guardados.
+      const response = await api.post('/auth/login', formValues);
+      
+      const newToken = response.data.accessToken || response.data.token;
+      const { user, permissions } = response.data;
+      
+      // 3. Salvamos a sessão correta (com o Crachá novo) e entramos!
+      setAuth(user || {}, newToken, permissions || {});
+      
+      setUnitSelectionModal(false);
+      message.success(`Acessando: ${unit.nomeFantasia || 'Unidade'}`);
+      navigate('/dashboard');
+    } catch (error: any) {
+      // 🔥 CORREÇÃO: Em vez de mensagem genérica, exibimos a real (Ex: "Muitas tentativas. Conta bloqueada temporariamente")
+      message.error(error.response?.data?.message || 'Erro ao gerar credencial para a unidade selecionada. Tente novamente.');
+      localStorage.removeItem('@PEP:unit');
+    }
   };
 
   return (
@@ -148,7 +150,8 @@ export const LoginPage = () => {
             <List.Item 
               style={{ cursor: 'pointer', transition: 'background 0.2s', padding: '12px 16px', border: '1px solid #f0f0f0', borderRadius: 8, marginBottom: 8 }}
               className="unit-list-item"
-              onClick={() => handleSelectUnit(unit, tempAuthData?.token as string, tempAuthData?.user, tempAuthData?.permissions)}
+              // 🔥 AQUI chamamos a função inteligente que refaz o login
+              onClick={() => handleSelectUnit(unit)}
               actions={[<RightOutlined style={{ color: '#1890ff' }} />]}
             >
               <List.Item.Meta

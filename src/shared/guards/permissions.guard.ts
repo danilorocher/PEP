@@ -23,6 +23,12 @@ export class PermissionsGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<TenantRequest>();
     const user = (request as any).user;
+    
+    // 🔥 BYPASS MASTER ADMIN: Se for o e-mail master, libera TUDO imediatamente sem olhar o banco
+    if (user && user.email === 'admin@pep.com') {
+      return true;
+    }
+
     const tenantId = request.tenant?.id;
 
     if (!user || !tenantId) {

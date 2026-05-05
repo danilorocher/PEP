@@ -15,8 +15,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Login realizado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
   @ApiResponse({ status: 429, description: 'Muitas tentativas de login. Conta bloqueada temporariamente.' })
-  // Sobrescreve o Rate Limiter global para esta rota: Máximo 5 requisições a cada 60 segundos
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) 
+  // 🔥 CORREÇÃO: Aumentamos o limite para 20 requisições por minuto para suportar o Duplo Check-in fluído!
+  @Throttle({ default: { limit: 20, ttl: 60000 } }) 
   async login(
     @Body() loginDto: LoginDto,
     @Req() req: TenantRequest,

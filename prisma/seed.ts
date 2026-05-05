@@ -7,11 +7,12 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Iniciando o Seed de Testes do PEP+...');
 
-  // Senha padrão para todos os usuários: 123456
+  // Senha padrão para todos os usuários comuns: 123456
   const passwordHash = await bcrypt.hash('123456', 10);
   
-  // 🔥 DADOS DO ADMIN MASTER (Comum a todos os hospitais)
+  // 🔥 DADOS DO ADMIN MASTER (Comum a todos os hospitais) com senha exclusiva
   const masterAdminEmail = 'admin@pep.com';
+  const masterAdminPasswordHash = await bcrypt.hash('Admin@2024!', 10);
   const masterAdminCpf = '00000000000'; // Mesmo CPF para unificar a identidade física
 
   const hospitais = [
@@ -55,10 +56,10 @@ async function main() {
     });
 
     // 3. Criar Usuários Funcionários
-    // 3.1 Administrador MASTER (Sempre o mesmo e-mail e CPF)
+    // 3.1 Administrador MASTER (Sempre o mesmo e-mail e CPF, com senha fixa)
     await prisma.user.upsert({
       where: { email_tenantId: { email: masterAdminEmail, tenantId: tenant.id } },
-      update: {},
+      update: { password: masterAdminPasswordHash }, // Força a senha a ser atualizada se já existir
       create: {
         tenantId: tenant.id, 
         roleId: roleAdmin.id, 
@@ -66,8 +67,8 @@ async function main() {
         nomeCompleto: `Administrador Master`, 
         email: masterAdminEmail,
         cpf: masterAdminCpf, 
-        cpfHash: masterAdminCpf, // Usando o CPF bruto como Hash para testes
-        password: passwordHash,
+        cpfHash: masterAdminCpf, 
+        password: masterAdminPasswordHash, // 🔥 Senha Admin@2024!
       },
     });
 
@@ -104,7 +105,7 @@ async function main() {
       },
     });
 
-    // 4. Criar Estrutura (Ala e Leitos) para Internação (🔥 Corrigido para não duplicar)
+    // 4. Criar Estrutura (Ala e Leitos) para Internação
     let ward = await prisma.ward.findFirst({ where: { nome: 'Enfermaria Clínica', tenantId: tenant.id } });
     if (!ward) {
       ward = await prisma.ward.create({
@@ -180,15 +181,13 @@ async function main() {
 
   console.log('\n✅ Seed finalizado com sucesso!');
   console.log('--------------------------------------------------');
-  console.log('Credenciais geradas para testes (A senha para TODOS é: 123456)');
-  console.log('\n🏥 HOSPITAL SANTA MARIA (Subdomínio: santamaria)');
-  console.log('   Admin:      admin@pep.com');
-  console.log('   Recepção:   recepcao@santamaria.com');
-  console.log('   Médico:     medico@santamaria.com');
-  console.log('\n🏥 HOSPITAL SÃO LUCAS (Subdomínio: saolucas)');
-  console.log('   Admin:      admin@pep.com');
-  console.log('   Recepção:   recepcao@saolucas.com');
-  console.log('   Médico:     medico@saolucas.com');
+  console.log('Credenciais geradas para testes:');
+  console.log('--- ADMIN MASTER ---');
+  console.log('   E-mail:     admin@pep.com');
+  console.log('   Senha:      Admin@2024!');
+  console.log('\n--- FUNCIONÁRIOS DA UNIDADE (Senha: 123456) ---');
+  console.log('   Recepção:   recepcao@santamaria.com / recepcao@saolucas.com');
+  console.log('   Médico:     medico@santamaria.com / medico@saolucas.com');
   console.log('--------------------------------------------------');
 }
 

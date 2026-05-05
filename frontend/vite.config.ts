@@ -11,5 +11,6 @@ export default defineConfig({
   },
   server: {
     port: 3001,
+    host: true, // 🔥 MÁGICA 1: Diz ao Vite para se expor na rede local (0.0.0.0)
   },
 });

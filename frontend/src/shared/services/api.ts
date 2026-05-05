@@ -1,18 +1,29 @@
 import axios from 'axios';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useTenantStore } from '../../store/useTenantStore';
+
+// 🔥 A MÁGICA: Deteta automaticamente se está em localhost ou num IP da rede!
+const currentHost = window.location.hostname;
+const apiURL = import.meta.env.VITE_API_URL || `http://${currentHost}:3000`;
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  baseURL: apiURL,
 });
 
-// Interceptor para injetar o Host/Tenant e o Token
+// Interceptor para injetar o Tenant e o Token
 api.interceptors.request.use((config) => {
   const { accessToken } = useAuthStore.getState();
-  const { getHostname } = useTenantStore.getState();
 
-  // O backend detecta o tenant via Host header
-  config.headers.Host = getHostname();
+  const unitStorage = localStorage.getItem('@PEP:unit');
+  if (unitStorage) {
+    try {
+      const unit = JSON.parse(unitStorage);
+      if (unit && unit.subdomain) {
+        config.headers['x-tenant-subdomain'] = unit.subdomain;
+      }
+    } catch (e) {
+      console.error('Erro ao ler a unidade', e);
+    }
+  }
   
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
@@ -27,11 +38,16 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // 🔥 A CORREÇÃO DE OURO: Não interceptar rotas de login ou refresh
+    // Se o erro for no login, devolve para a tela mostrar a mensagem vermelha!
+    if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh')) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
-        // O refresh token é enviado automaticamente via Cookie HttpOnly
         const { data } = await axios.post(
           `${api.defaults.baseURL}/auth/refresh`, 
           {}, 

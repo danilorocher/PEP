@@ -1,21 +1,32 @@
-import { Injectable, NestMiddleware, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, NestMiddleware, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { PrismaService } from '../../shared/infrastructure/database/prisma/repositories/prisma.service';
 import { getTenantPrisma, TenantPrismaClient } from '../../shared/infrastructure/database/prisma/prisma-tenant.service';
 
 export interface TenantRequest extends Request {
-  tenant: {
+  tenant?: {
     id: string;
     subdomain: string;
   };
-  prismaSafe: TenantPrismaClient; // 🔥 NOVO: O Prisma Blindado injetado aqui
+  prismaSafe?: TenantPrismaClient;
 }
 
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
+  private readonly logger = new Logger(TenantMiddleware.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async use(req: Request, res: Response, next: NextFunction) {
+    // 1. PASSE LIVRE PARA CORS
+    if (req.method === 'OPTIONS') {
+      return next();
+    }
+
+    // 2. LEITURA INTELIGENTE DA ROTA
+    const urlString = String(req.originalUrl || req.url || req.path || '');
+    const isPublicRoute = urlString.includes('/auth/login') || urlString.includes('/auth/refresh');
+
     const hostWithPort = req.headers.host || '';
     const host = hostWithPort.split(':')[0]; 
 
@@ -23,13 +34,28 @@ export class TenantMiddleware implements NestMiddleware {
       throw new BadRequestException('Host header é obrigatório.');
     }
 
-    const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+    // 🔥 CORREÇÃO: Identifica automaticamente se o host é um IP da rede (Ex: 192.168.X.X, 10.0.X.X)
+    const isIpAddress = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host);
+    const isLocalhost = host === 'localhost' || isIpAddress;
+    
     let subdomain = host.split('.')[0];
 
-    if (isLocalhost && (subdomain === 'localhost' || subdomain === '127')) {
-      subdomain = (req.headers['x-tenant-subdomain'] as string) || 'admin';
+    // Se estiver a aceder via localhost ou IP de rede, lê o hospital correto da "porta secreta"
+    if (isLocalhost) {
+      subdomain = (req.headers['x-tenant-subdomain'] as string) || '';
     }
 
+    // 3. AVALIAÇÃO DA ROTA PÚBLICA
+    if (!subdomain) {
+      if (isPublicRoute) {
+        (req as any).tenant = { id: 'GLOBAL_AUTH', subdomain: 'global' };
+        return next();
+      }
+      this.logger.warn(`Acesso bloqueado (Sem Tenant): ${req.method} ${urlString}`);
+      throw new UnauthorizedException('Unidade (Hospital) não especificada na requisição.');
+    }
+
+    // 4. BLINDAGEM DE ACESSO (Row-Level Security)
     const tenant = await this.prisma.tenant.findUnique({
       where: { subdomain },
       select: { id: true, subdomain: true, isActive: true }
@@ -48,7 +74,6 @@ export class TenantMiddleware implements NestMiddleware {
       subdomain: tenant.subdomain,
     };
 
-    // 🔥 MÁGICA: Injeta a instância do Prisma com RLS (Row-Level Security)
     (req as any).prismaSafe = getTenantPrisma(this.prisma, tenant.id);
 
     next();
