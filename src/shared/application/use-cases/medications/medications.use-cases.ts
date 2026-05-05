@@ -25,12 +25,11 @@ export class MedicationsUseCases {
     });
   }
 
-  // 🔥 PAGINAÇÃO COM CACHE + FILTROS
+  /// 🔥 PAGINAÇÃO COM CACHE + FILTROS + SOMA DE ESTOQUE
   async findAll(tenantId: string, query: QueryMedicationsDto) {
     const { page, limit, search, formaFarmaceutica, controleEspecial } = query;
     const { skip, take } = buildPaginationQuery(page, limit);
     
-    // Chave de cache precisa incluir os filtros para ser única
     const cacheKey = `tenant:${tenantId}:meds:page:${page}:lim:${limit}:s:${search || ''}:f:${formaFarmaceutica || ''}:c:${controleEspecial}`;
 
     return this.redisService.getOrSet(cacheKey, 60, async () => {
@@ -46,11 +45,34 @@ export class MedicationsUseCases {
       if (controleEspecial !== undefined) where.controleEspecial = controleEspecial;
 
       const [data, total] = await Promise.all([
-        this.prisma.medication.findMany({ where, skip, take, orderBy: { nome: 'asc' } }),
+        this.prisma.medication.findMany({ 
+          where, 
+          skip, 
+          take, 
+          orderBy: { nome: 'asc' },
+          // 🔥 NOVO: Incluímos a tabela de stocks para checagem em tempo real
+          include: {
+            stocks: {
+              where: { deletedAt: null }
+            }
+          }
+        }),
         this.prisma.medication.count({ where })
       ]);
 
-      return buildPaginatedResult(data, total, page, limit);
+      // 🔥 NOVO: Mapeamos o retorno para incluir a quantidade total disponível
+      const mappedData = data.map(med => {
+        const totalStock = med.stocks.reduce((acc, curr) => acc + curr.quantidade, 0);
+        // Remove o array pesado de stocks para não sobrecarregar a rede do Frontend
+        delete (med as any).stocks; 
+        
+        return {
+          ...med,
+          totalStock
+        };
+      });
+
+      return buildPaginatedResult(mappedData, total, page, limit);
     });
   }
 

@@ -1358,13 +1358,14 @@ model GlasgowAssessment {
 // 11. FARMÁCIA: ESTOQUE E LOTES
 // ==========================================
 model MedicationStock {
-  id           String   @id @default(uuid())
-  tenantId     String
-  medicationId String
-  lote         String
-  validade     DateTime
-  quantidade   Float
-  localizacao  String // ex: "Farmácia Central", "Farmácia UTI"
+  id             String   @id @default(uuid())
+  tenantId       String
+  medicationId   String
+  lote           String
+  dataFabricacao DateTime?  // 🔥 NOVO: Rastreabilidade
+  validade       DateTime
+  quantidade     Float
+  localizacao    String // ex: "Farmácia Central", "Farmácia UTI"
 
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt

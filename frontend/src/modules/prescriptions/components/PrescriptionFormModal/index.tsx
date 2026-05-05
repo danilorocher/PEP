@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal, Form, Select, Input, InputNumber, Button, Space, Typography, message, Divider, Card, Row, Col } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+// 🔥 CORREÇÃO: ExclamationCircleOutlined adicionado na importação abaixo
+import { PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -35,7 +36,7 @@ interface PrescriptionFormModalProps {
 
 export const PrescriptionFormModal = ({ visible, recordId, hospitalizationId, onCancel, onSuccess }: PrescriptionFormModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [medications, setMedications] = useState([]);
+  const [medications, setMedications] = useState<any[]>([]);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<PrescriptionFormData>({
     resolver: zodResolver(prescriptionSchema),
@@ -112,15 +113,59 @@ export const PrescriptionFormModal = ({ visible, recordId, hospitalizationId, on
             fields.length > 1 && <Button type="text" danger icon={<DeleteOutlined />} onClick={() => remove(index)} />
           }>
             <Row gutter={16}>
+              {/* 🔥 COLUNA DO MEDICAMENTO COM O POP-UP DE ESTOQUE */}
               <Col span={12}>
-                <Form.Item label="Medicamento" required validateStatus={errors.items?.[index]?.medicationId ? 'error' : ''} help={errors.items?.[index]?.medicationId?.message}>
+                <Form.Item 
+                  label="Medicamento (Catálogo da Farmácia)" 
+                  required 
+                  validateStatus={errors.items?.[index]?.medicationId ? 'error' : ''} 
+                  help={errors.items?.[index]?.medicationId?.message}
+                >
                   <Controller name={`items.${index}.medicationId`} control={control} render={({ field }) => (
-                    <Select {...field} showSearch optionFilterProp="children" placeholder="Buscar medicamento">
-                      {medications.map((m: any) => <Select.Option key={m.id} value={m.id}>{m.nome} ({m.formaFarmaceutica})</Select.Option>)}
+                    <Select 
+                      {...field} 
+                      showSearch 
+                      optionFilterProp="children" 
+                      placeholder="Buscar medicamento"
+                      onChange={(value) => {
+                        const selectedMed = medications.find((m: any) => m.id === value);
+                        
+                        if (selectedMed && selectedMed.totalStock <= 0) {
+                          Modal.confirm({
+                            title: 'Atenção: Medicamento sem Estoque',
+                            icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
+                            content: (
+                              <div>
+                                <p>O medicamento <strong>{selectedMed.nome}</strong> não possui saldo registrado no estoque atual da farmácia.</p>
+                                <p>Deseja prescrever mesmo assim para que a farmácia providencie?</p>
+                              </div>
+                            ),
+                            okText: 'Sim, Prescrever',
+                            cancelText: 'Cancelar',
+                            onOk: () => {
+                              field.onChange(value); // Libera o preenchimento se confirmado
+                            }
+                          });
+                        } else {
+                          field.onChange(value); // Fluxo normal se tiver estoque
+                        }
+                      }}
+                    >
+                      {medications.map((m: any) => (
+                        <Select.Option key={m.id} value={m.id}>
+                          {m.nome} ({m.formaFarmaceutica}) 
+                          {/* Feedback visual no dropdown */}
+                          <span style={{ float: 'right', fontSize: '12px', color: m.totalStock <= 0 ? '#cf1322' : '#389e0d' }}>
+                            {m.totalStock <= 0 ? '🔴 SEM ESTOQUE' : `🟢 Estoque: ${m.totalStock}`}
+                          </span>
+                        </Select.Option>
+                      ))}
                     </Select>
                   )} />
                 </Form.Item>
               </Col>
+
+              {/* 🔥 CORREÇÃO: Dosagem e Via de Administração restauradas */}
               <Col span={6}>
                 <Form.Item label="Dosagem" required validateStatus={errors.items?.[index]?.dosagem ? 'error' : ''} help={errors.items?.[index]?.dosagem?.message}>
                   <Controller name={`items.${index}.dosagem`} control={control} render={({ field }) => <Input {...field} placeholder="Ex: 500mg" />} />
@@ -141,6 +186,7 @@ export const PrescriptionFormModal = ({ visible, recordId, hospitalizationId, on
                 </Form.Item>
               </Col>
             </Row>
+
             <Row gutter={16}>
               <Col span={6}>
                 <Form.Item label="Frequência" required validateStatus={errors.items?.[index]?.frequencia ? 'error' : ''} help={errors.items?.[index]?.frequencia?.message}>

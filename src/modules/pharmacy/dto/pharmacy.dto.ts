@@ -6,6 +6,10 @@ import { InteractionSeverity, ControlledOperation } from '@prisma/client';
 export class AddStockDto {
   @ApiProperty() @IsUUID() @IsNotEmpty() medicationId: string;
   @ApiProperty() @IsString() @IsNotEmpty() lote: string;
+  
+  // 🔥 CORREÇÃO: Adicionado o campo dataFabricacao como opcional
+  @ApiProperty({ required: false }) @IsString() @IsOptional() dataFabricacao?: string;
+  
   @ApiProperty() @IsString() @IsNotEmpty() validade: string; // ISO DateTime
   @ApiProperty() @IsNumber() @IsNotEmpty() quantidade: number;
   @ApiProperty() @IsString() @IsNotEmpty() localizacao: string;
