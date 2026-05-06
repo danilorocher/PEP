@@ -75,4 +75,11 @@ export class ExamsController {
     const userId = (req as any).user.sub;
     return this.examRequestsUseCases.cancel(id, req.tenant.id, userId, req.ip || '', req.headers['user-agent'] || '');
   }
+
+  @Patch('requests/:id/status')
+  @RequirePermissions({ module: 'exames', action: 'liberar' })
+  updateStatus(@Param('id') id: string, @Body() dto: { status: string }, @Req() req: TenantRequest) {
+    const userId = (req as any).user.sub;
+    return this.examRequestsUseCases.updateStatus(id, req.tenant!.id, dto.status, userId, req.ip || '', req.headers['user-agent'] || '');
+  }
 }

@@ -8,7 +8,7 @@ export class PrismaExamRequestRepository implements IExamRequestRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(record: any): ExamRequest {
-    if (!record) return null;
+    if (!record) return null as any;
     return new ExamRequest(
       record.id, record.tenantId, record.medicalRecordId, record.hospitalizationId,
       record.solicitadoPor, record.patientId, record.examId, record.cid10Id,
@@ -48,16 +48,37 @@ export class PrismaExamRequestRepository implements IExamRequestRepository {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.examRequest.findMany({ where, skip, take, orderBy: { dataHoraSolicitacao: 'desc' }, include: { exam: true, patient: true, doctor: true } }),
+      this.prisma.examRequest.findMany({ 
+        where, skip, take, orderBy: { dataHoraSolicitacao: 'desc' }, 
+        // 🔥 MÁGICA: Agora o banco de dados puxa o Leito e a Ala da Internação do paciente!
+        include: { exam: true, patient: true, doctor: true, hospitalization: { include: { ward: true, bed: true } } } 
+      }),
       this.prisma.examRequest.count({ where })
     ]);
-    return { data: data.map(r => this.toDomain(r)), total };
+    
+    return { 
+      data: data.map(r => Object.assign(this.toDomain(r), { 
+        exam: r.exam, 
+        patient: r.patient, 
+        doctor: r.doctor,
+        hospitalization: r.hospitalization // 🔥 Injetado no resultado final
+      })), 
+      total 
+    };
   }
 
   async updateResult(id: string, tenantId: string, resultado: string, status: string, dataHora: Date): Promise<void> {
     await this.prisma.examRequest.update({
       where: { id, tenantId },
       data: { resultado, status: status as any, dataHoraResultado: dataHora }
+    });
+  }
+
+  // 🔥 NOVO: Atualiza o status diretamente no banco
+  async updateStatus(id: string, tenantId: string, status: string): Promise<void> {
+    await this.prisma.examRequest.update({
+      where: { id, tenantId },
+      data: { status: status as any }
     });
   }
 }

@@ -6,8 +6,6 @@ import { PrismaService } from '../../../infrastructure/database/prisma/repositor
 import { Hospitalization } from '../../../domain/entities/hospitalization.entity';
 import * as crypto from 'crypto';
 import { AdmitPatientDto, DischargePatientDto } from '../../../../modules/hospitalizations/dto/hospitalization.dto';
-
-// 🔥 Paginação e Filtros
 import { QueryHospitalizationsDto } from '../../../../modules/hospitalizations/dto/query-hospitalizations.dto';
 import { buildPaginationQuery, buildPaginatedResult } from '../../../infrastructure/utils/prisma-pagination.util';
 
@@ -29,14 +27,15 @@ export class HospitalizationsUseCases {
     
     const created = await this.prisma.$transaction(async (tx) => {
       if (!record) {
-        const anoMes = new Date().toISOString().slice(0, 7).replace('-', '');
-        const randomNum = Math.floor(1000 + Math.random() * 9000);
-        const numero = `PR-${anoMes}-${randomNum}`;
+        // 🔥 A MÁGICA 2: Sequencialização no ato da internação (Emergência)
+        const count = await tx.medicalRecord.count({ where: { tenantId } });
+        const sequencial = count + 1;
+        const numeroProntuario = `PEP-${String(sequencial).padStart(6, '0')}`;
         
         const newRecord = await tx.medicalRecord.create({
           data: {
             id: crypto.randomUUID(), tenantId, patientId: data.patientId,
-            numero, status: 'ABERTO', responsavelAberturaId: userId
+            numero: numeroProntuario, status: 'ABERTO', responsavelAberturaId: userId
           }
         });
         record = { id: newRecord.id, patientId: newRecord.patientId } as any;
@@ -74,7 +73,7 @@ export class HospitalizationsUseCases {
   }
 
   async dischargePatient(tenantId: string, hospitalizationId: string, userId: string, userRole: string, data: DischargePatientDto, ip: string, userAgent: string): Promise<void> {
-    if (userRole !== 'MEDICO' && userRole !== 'ADMIN') {
+    if (userRole !== 'MEDICO' && userRole !== 'ADMIN' && userRole !== 'MASTER_ADMIN') {
       throw new ForbiddenException('Apenas médicos podem conceder alta hospitalar.');
     }
 
@@ -116,7 +115,6 @@ export class HospitalizationsUseCases {
     });
   }
 
-  // 🔥 MÉTODO REFATORADO PARA PAGINAÇÃO
   async findAll(tenantId: string, query: QueryHospitalizationsDto, userId: string, ip: string, userAgent: string) {
     const { page, limit, patientId, status, wardId, medicoResponsavelId } = query;
     const { skip, take } = buildPaginationQuery(page, limit);

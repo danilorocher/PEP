@@ -20,8 +20,16 @@ function getPermissions(user: User | null, storePermissions: PermissionsMap): Pe
 
 export const usePermission = (module: string, action: string): boolean => {
   const { permissions, user } = useAuthStore();
-  if (getRoleName(user) === 'ADMIN') return true;
+  const roleName = getRoleName(user);
+  
+  // 🔥 CORREÇÃO 1: Reconhecer o MASTER_ADMIN como Deus do Sistema
+  if (roleName === 'ADMIN' || roleName === 'MASTER_ADMIN') return true;
+  
   const safePermissions = getPermissions(user, permissions);
+  
+  // 🔥 CORREÇÃO 2: Se o backend mandou a permissão curinga "*", liberar imediatamente!
+  if (safePermissions['*'] && safePermissions['*']['*']) return true;
+
   const modulePermissions = safePermissions[module];
   if (!modulePermissions) return false;
   return !!modulePermissions[action];

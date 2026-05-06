@@ -15,11 +15,12 @@ export class PaginationDto {
   @IsOptional()
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Itens por página (padrão: 10)', minimum: 1, maximum: 100, default: 10 })
+  @ApiPropertyOptional({ description: 'Itens por página (padrão: 10)', minimum: 1, maximum: 1000, default: 10 })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100) // Proteção contra requisições abusivas (DDoS)
+  // 🔥 CORREÇÃO: Aumentamos o teto de segurança para 1000 para suportar os Dropdowns do Frontend
+  @Max(1000) 
   @IsOptional()
   limit?: number = 10;
 

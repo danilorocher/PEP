@@ -12,7 +12,6 @@ export class PharmacyStockUseCases {
       const localizacaoFinal = data.localizacao || 'Almoxarifado Central';
       const quantidadeAdd = parseFloat(data.quantidade.toString());
 
-      // 1. Verifica se já existe esse Lote para esse Medicamento neste local
       const estoqueExistente = await this.prisma.medicationStock.findFirst({
         where: {
           tenantId,
@@ -22,7 +21,6 @@ export class PharmacyStockUseCases {
         }
       });
 
-      // 2. Se o Lote já existe, apenas SOMA a nova quantidade (Update)
       if (estoqueExistente) {
         return await this.prisma.medicationStock.update({
           where: { id: estoqueExistente.id },
@@ -32,7 +30,6 @@ export class PharmacyStockUseCases {
         });
       }
 
-      // 3. Se não existe, cria um registro novo no banco de dados
       return await this.prisma.medicationStock.create({
         data: {
           tenantId,
@@ -50,7 +47,6 @@ export class PharmacyStockUseCases {
     }
   }
 
-  // --- Funções de Consulta e Catálogo abaixo ---
   async getAllStock(tenantId: string) {
     return await this.prisma.medicationStock.findMany({
       where: { tenantId, deletedAt: null },
@@ -66,11 +62,22 @@ export class PharmacyStockUseCases {
     });
   }
 
+  // 🔥 A MÁGICA: Trazemos o catálogo já calculando a soma total do estoque
   async getAllMedicationsCatalog(tenantId: string) {
-    return await this.prisma.medication.findMany({
+    const meds = await this.prisma.medication.findMany({
       where: { tenantId, deletedAt: null },
-      select: { id: true, nome: true, principioAtivo: true, concentracao: true, formaFarmaceutica: true },
+      include: {
+        stocks: { where: { deletedAt: null } }
+      },
       orderBy: { nome: 'asc' }
+    });
+
+    return meds.map(m => {
+      // Soma todos os lotes que não foram deletados
+      const totalStock = m.stocks.reduce((acc, curr) => acc + curr.quantidade, 0);
+      // Remove a lista pesada de lotes para não sobrecarregar a rede do Frontend
+      const { stocks, ...rest } = m;
+      return { ...rest, totalStock };
     });
   }
 
@@ -83,7 +90,6 @@ export class PharmacyStockUseCases {
           nome: data.nome,
           principioAtivo: data.principioAtivo,
           formaFarmaceutica: data.formaFarmaceutica,
-          // 🔥 Aqui está a nossa correção que garante a validação
           viaAdministracaoPadrao: data.viaAdministracaoPadrao || 'ORAL',
           status: 'ATIVO'
         } as any
@@ -93,4 +99,4 @@ export class PharmacyStockUseCases {
       throw new BadRequestException('Erro de validação ao salvar medicamento no catálogo.');
     }
   }
-} // <-- Esta foi a chave que se perdeu anteriormente!
+}

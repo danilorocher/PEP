@@ -14,7 +14,7 @@ import {
   ScissorOutlined,
   WalletOutlined,
   HeartOutlined,
-  ExperimentOutlined // 🔥 Novo ícone para o LIS
+  ExperimentOutlined 
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -48,7 +48,8 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
     {
       key: '/medical-records',
       icon: <SolutionOutlined />,
-      label: 'Prontuários',
+      // 🔥 AQUI: Expectativa do usuário ajustada!
+      label: 'Buscar Prontuário', 
     },
     {
       key: '/hospitalizations',
@@ -78,15 +79,13 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
     {
       key: '/exams',
       icon: <FileSearchOutlined />,
-      label: 'Exames',
+      label: 'Central de Exames',
     },
     {
-      key: '/lab', // 🔥 Novo Módulo LIS
+      key: '/lab', 
       icon: <ExperimentOutlined />,
       label: 'Laboratório (LIS)',
     },
-    
-    // 🔥 FATURAMENTO AGRUPADO (SUBMENU)
     {
       key: 'billing-group',
       icon: <ContainerOutlined />,
@@ -103,7 +102,6 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
         },
       ]
     },
-
     {
       key: '/reports',
       icon: <AuditOutlined />,
@@ -117,6 +115,7 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
         { key: '/professionals', label: 'Profissionais' }, 
         { key: '/companies', label: 'Minhas Unidades' },
         { key: '/admin', label: 'Estrutura Hospitalar' },
+        { key: '/exam-catalog', label: 'Catálogo de Exames' },
       ]
     },
   ];
@@ -138,7 +137,6 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
         selectedKeys={[location.pathname]}
         items={menuItems}
         onClick={({ key }) => {
-          // 🔥 Evita tentar navegar ao clicar nos "Pai" dos submenus
           if (key !== 'admin-group' && key !== 'billing-group') {
             navigate(key);
           }

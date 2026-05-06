@@ -5,7 +5,8 @@ import { PaginatedResult } from '../../domain/interfaces/paginated-result.interf
  */
 export function buildPaginationQuery(page: number = 1, limit: number = 10): { skip: number; take: number } {
   const validPage = Math.max(1, Number(page) || 1);
-  const validLimit = Math.max(1, Math.min(100, Number(limit) || 10)); // Hard limit de 100 para segurança
+  // 🔥 CORREÇÃO: Ajuste do Hard Limit interno do banco de dados para 1000
+  const validLimit = Math.max(1, Math.min(1000, Number(limit) || 10)); 
   
   return {
     skip: (validPage - 1) * validLimit,

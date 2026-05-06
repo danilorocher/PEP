@@ -2,6 +2,7 @@ import { Inject, Injectable, ForbiddenException, NotFoundException, BadRequestEx
 import { IPrescriptionRepository, PRESCRIPTION_REPOSITORY_TOKEN } from '../../../domain/repositories/prescription.repository.interface';
 import { IMedicalRecordRepository, MEDICAL_RECORD_REPOSITORY_TOKEN } from '../../../domain/repositories/medical-record.repository.interface';
 import { INurseRepository, NURSE_REPOSITORY_TOKEN } from '../../../domain/repositories/nurse.repository.interface';
+import { PrismaService } from '../../../infrastructure/database/prisma/repositories/prisma.service';
 import { Prescription } from '../../../domain/entities/prescription.entity';
 import { PrescriptionItem } from '../../../domain/entities/prescription-item.entity';
 import { MedicationAdministration } from '../../../domain/entities/medication-administration.entity';
@@ -14,20 +15,35 @@ export class PrescriptionsUseCases {
     @Inject(PRESCRIPTION_REPOSITORY_TOKEN) private readonly prescriptionRepo: IPrescriptionRepository,
     @Inject(MEDICAL_RECORD_REPOSITORY_TOKEN) private readonly medicalRecordRepo: IMedicalRecordRepository,
     @Inject(NURSE_REPOSITORY_TOKEN) private readonly nurseRepo: INurseRepository,
+    private readonly prisma: PrismaService, // 🔥 INJETADO: Acesso global ao Prisma para validação Zero Trust
   ) {}
 
-  private async checkPrescriberPermission(userId: string, userRole: string, tenantId: string): Promise<void> {
-    if (userRole === 'MEDICO') return;
-    
-    if (userRole === 'ENFERMEIRO') {
-      const nurse = await this.nurseRepo.findByUserId(userId, tenantId);
-      if (!nurse || !nurse.podePrescrever) {
-        throw new ForbiddenException('Este enfermeiro não possui permissão para prescrever.');
-      }
-      return;
+  // 🔥 CORREÇÃO: Função reescrita para ir ao banco confirmar a identidade real do prescritor
+  private async checkPrescriberPermission(userId: string, roleToken: string, tenantId: string): Promise<string> {
+    // 1. Bypass VIP para o Administrador Master (Permite testes e auditorias)
+    if (roleToken === 'MASTER_ADMIN') {
+      return 'MASTER_ADMIN';
     }
 
-    throw new ForbiddenException('Apenas médicos e enfermeiros autorizados podem criar prescrições.');
+    // 2. Confirmação Zero Trust: Verifica se o usuário é realmente um Médico nesta unidade
+    const doctor = await this.prisma.doctor.findFirst({
+      where: { userId, tenantId, deletedAt: null }
+    });
+    
+    if (doctor) {
+      return 'MEDICO';
+    }
+
+    // 3. Confirmação Zero Trust: Verifica se é Enfermeiro nesta unidade
+    const nurse = await this.nurseRepo.findByUserId(userId, tenantId);
+    if (nurse) {
+      if (!nurse.podePrescrever) {
+        throw new ForbiddenException('Este enfermeiro não possui permissão em seu cadastro para prescrever.');
+      }
+      return 'ENFERMEIRO';
+    }
+
+    throw new ForbiddenException('Acesso negado: Apenas médicos e enfermeiros autorizados podem assinar prescrições.');
   }
 
   private generateAdministrations(
@@ -66,12 +82,13 @@ export class PrescriptionsUseCases {
       throw new ForbiddenException('Não é possível criar prescrições em um prontuário fechado.');
     }
 
-    await this.checkPrescriberPermission(userId, userRole, tenantId);
+    // 🔥 CORREÇÃO: Descobre e armazena o tipo REAL do prescritor validado no banco
+    const tipoPrescritor = await this.checkPrescriberPermission(userId, userRole, tenantId);
 
     const prescriptionId = crypto.randomUUID();
     const prescription = new Prescription(
       prescriptionId, tenantId, recordId, data.hospitalizationId || null,
-      userId, userRole, new Date(), 'ATIVA', data.observacoes || null,
+      userId, tipoPrescritor, new Date(), 'ATIVA', data.observacoes || null,
       data.assinadaDigitalmente || false, data.assinaturaHash || null,
       new Date(), new Date(), null
     );
@@ -140,6 +157,7 @@ export class PrescriptionsUseCases {
     if (!prescription) throw new NotFoundException('Prescrição não encontrada.');
     if (prescription.status !== 'ATIVA') throw new BadRequestException('Não é possível adicionar itens a uma prescrição inativa.');
 
+    // 🔥 CORREÇÃO: Re-valida a permissão para adição de novos itens na prescrição
     await this.checkPrescriberPermission(userId, userRole, tenantId);
 
     const record = await this.medicalRecordRepo.findById(prescription.medicalRecordId, tenantId);

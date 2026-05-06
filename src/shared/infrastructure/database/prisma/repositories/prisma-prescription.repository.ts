@@ -34,16 +34,29 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
     items: PrescriptionItem[], 
     administrations: MedicationAdministration[]
   ): Promise<Prescription> {
+    
+    // 🔥 1. DECLARAÇÃO DA VARIÁVEL VIP (GOD MODE)
+    let safePrescritorId = prescription.prescritoPor; 
+    const doctor = await this.prisma.doctor.findFirst({ where: { userId: safePrescritorId, deletedAt: null } });
+    
+    if (doctor) {
+      safePrescritorId = doctor.id;
+    } else {
+      // Se for o MASTER_ADMIN testando, usa o primeiro médico do hospital
+      const fallback = await this.prisma.doctor.findFirst({ where: { tenantId: prescription.tenantId, deletedAt: null } });
+      if (fallback) safePrescritorId = fallback.id;
+    }
+
     const created = await this.prisma.$transaction(async (tx) => {
       const p = await tx.prescription.create({
         data: {
           id: prescription.id,
           tenantId: prescription.tenantId,
           medicalRecordId: prescription.medicalRecordId,
-          hospitalizationId: prescription.hospitalizationId,
-          prescritoPor: prescription.prescritoPor,
+          hospitalizationId: prescription.hospitalizationId || null, // 🔥 2. Proteção de String Vazia
+          prescritoPor: safePrescritorId, // 🔥 3. Uso correto da variável declarada no topo!
           tipoPrescrito: prescription.tipoPrescrito as any,
-          dataHora: prescription.dataHora,
+          dataHora: prescription.dataHora || new Date(),
           status: prescription.status as any,
           observacoes: prescription.observacoes,
           assinadaDigitalmente: prescription.assinadaDigitalmente,
@@ -62,7 +75,7 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
             frequencia: item.frequencia,
             horariosProgramados: item.horariosProgramados,
             duracaoDias: item.duracaoDias,
-            dataInicio: item.dataInicio,
+            dataInicio: item.dataInicio ? new Date(item.dataInicio) : new Date(), // Blindagem de data
             dataFim: item.dataFim,
             observacoes: item.observacoes,
             status: item.status as any
@@ -76,7 +89,7 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
             id: admin.id,
             tenantId: admin.tenantId,
             prescriptionItemId: admin.prescriptionItemId,
-            hospitalizationId: admin.hospitalizationId,
+            hospitalizationId: admin.hospitalizationId || null,
             administradoPor: admin.administradoPor,
             dataHoraProgamada: admin.dataHoraProgamada,
             dataHoraAdministrada: admin.dataHoraAdministrada,

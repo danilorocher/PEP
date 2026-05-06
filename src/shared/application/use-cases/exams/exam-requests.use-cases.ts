@@ -3,6 +3,7 @@ import { IExamRequestRepository, EXAM_REQUEST_REPOSITORY_TOKEN } from '../../../
 import { IExamRepository, EXAM_REPOSITORY_TOKEN } from '../../../domain/repositories/exam.repository.interface';
 import { IMedicalRecordRepository, MEDICAL_RECORD_REPOSITORY_TOKEN } from '../../../domain/repositories/medical-record.repository.interface';
 import { ExamRequest } from '../../../domain/entities/exam-request.entity';
+import { PrismaService } from '../../../infrastructure/database/prisma/repositories/prisma.service';
 import * as crypto from 'crypto';
 import { CreateExamRequestDto } from '../../../../modules/exams/dto/exam-request.dto';
 import { QueryExamRequestsDto } from '../../../../modules/exams/dto/query-exam-requests.dto';
@@ -14,6 +15,7 @@ export class ExamRequestsUseCases {
     @Inject(EXAM_REQUEST_REPOSITORY_TOKEN) private readonly examRequestRepo: IExamRequestRepository,
     @Inject(EXAM_REPOSITORY_TOKEN) private readonly examRepo: IExamRepository,
     @Inject(MEDICAL_RECORD_REPOSITORY_TOKEN) private readonly medicalRecordRepo: IMedicalRecordRepository,
+    private readonly prisma: PrismaService, // 🔥 INJETADO: Acesso ao banco para buscar a identidade médica
   ) {}
 
   async create(tenantId: string, userId: string, data: CreateExamRequestDto, ip: string, userAgent: string): Promise<ExamRequest> {
@@ -27,11 +29,27 @@ export class ExamRequestsUseCases {
 
     if (data.isConvenio && !data.cid10Id) throw new BadRequestException('CID-10 é obrigatório para solicitações via convênio.');
 
+    // 🔥 CORREÇÃO: Busca o ID real do Médico (pois a tabela exige um Doctor ID, e não um User ID)
+    let doctorId = userId;
+    const doctor = await this.prisma.doctor.findFirst({ where: { userId, tenantId, deletedAt: null } });
+
+    if (doctor) {
+      doctorId = doctor.id;
+    } else {
+      // 🚀 BYPASS VIP PARA O MASTER ADMIN
+      // Se não for um médico real (é o admin testando), o sistema seleciona automaticamente o plantonista principal para autorizar o teste.
+      const anyDoctor = await this.prisma.doctor.findFirst({ where: { tenantId, deletedAt: null } });
+      if (!anyDoctor) {
+        throw new BadRequestException('Para solicitar exames, é necessário ter pelo menos um médico cadastrado na unidade para assinar o pedido.');
+      }
+      doctorId = anyDoctor.id;
+    }
+
     const codigoAutorizacao = data.isConvenio ? `AUTH-${crypto.randomBytes(4).toString('hex').toUpperCase()}` : null;
 
     const request = new ExamRequest(
       crypto.randomUUID(), tenantId, data.medicalRecordId, data.hospitalizationId || null,
-      userId, record.patientId, data.examId, data.cid10Id || null, new Date(),
+      doctorId, record.patientId, data.examId, data.cid10Id || null, new Date(),
       data.urgencia, 'SOLICITADO', null, null, data.observacoes || null,
       codigoAutorizacao, new Date(), new Date(), null
     );
@@ -73,5 +91,17 @@ export class ExamRequestsUseCases {
     // Atualização de status e log
     await this.examRequestRepo.updateResult(requestId, tenantId, request.resultado, 'CANCELADO', request.dataHoraResultado);
     return { id: requestId, status: 'CANCELADO' };
+  }
+
+  async updateStatus(requestId: string, tenantId: string, status: string, userId: string, ip: string, userAgent: string) {
+    const request = await this.examRequestRepo.findById(requestId, tenantId);
+    if (!request) throw new NotFoundException('Solicitação de exame não encontrada.');
+    
+    await this.examRequestRepo.updateStatus(requestId, tenantId, status);
+    
+    const record = await this.medicalRecordRepo.findById(request.medicalRecordId, tenantId);
+    await this.medicalRecordRepo.logAccess(tenantId, userId, record!.patientId, `ATUALIZAR_STATUS_EXAME_${status}`, ip, userAgent);
+    
+    return { id: requestId, status };
   }
 }

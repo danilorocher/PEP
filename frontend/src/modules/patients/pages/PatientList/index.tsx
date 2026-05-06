@@ -1,7 +1,8 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
-import { Table, Button, Space, Typography, Tag, message, Modal } from 'antd';
+import { Table, Button, Space, Typography, Tag, message, Modal, Divider } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SolutionOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // 🔥 MÁGICA 2: Importamos useLocation
+import dayjs from 'dayjs';
 import api from '../../../../shared/services/api';
 import { PatientFilters } from '../../components/PatientFilters';
 
@@ -9,10 +10,14 @@ const { Title } = Typography;
 
 export const PatientListPage = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // 🔥 Detetamos a URL atual
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState({});
+
+  // 🔥 Verifica se o utilizador está na rota de Prontuários
+  const isMedicalRecordsRoute = location.pathname.includes('/medical-records');
 
   const fetchPatients = useCallback(async (page = 1, pageSize = 10, currentFilters = {}) => {
     setLoading(true);
@@ -25,8 +30,6 @@ export const PatientListPage = () => {
         },
       });
       
-      // 🔥 NOVO PADRÃO M1/M2: O backend agora devolve { success, data, meta }
-      // Verificamos se a resposta já está no formato novo (com 'meta')
       const isNewFormat = response.data && response.data.meta !== undefined;
 
       const patientList = isNewFormat 
@@ -44,7 +47,6 @@ export const PatientListPage = () => {
         total: totalCount,
       });
     } catch (error: any) {
-      // Lê a mensagem padronizada do Global Exception Filter
       message.error(error.response?.data?.message || 'Erro ao carregar lista de pacientes');
     } finally {
       setLoading(false);
@@ -88,12 +90,21 @@ export const PatientListPage = () => {
       title: 'Nome Completo',
       dataIndex: 'nomeCompleto',
       key: 'nomeCompleto',
-      render: (text: string, record: any) => (
-        <Space direction="vertical" size={0}>
-          <span style={{ fontWeight: 'bold' }}>{text}</span>
-          <small style={{ color: '#8c8c8c' }}>CPF: {record.cpf || 'Não informado'}</small>
-        </Space>
-      ),
+      render: (text: string, record: any) => {
+        const pep = record.medicalRecords?.[0]?.numero || 'Não gerado';
+        const nascimento = record.dataNascimento ? dayjs(record.dataNascimento).format('DD/MM/YYYY') : '---';
+
+        return (
+          <Space direction="vertical" size={0}>
+            <span style={{ fontWeight: 'bold' }}>{text}</span>
+            <Space split={<Divider type="vertical" style={{ margin: '0 4px' }} />} style={{ color: '#8c8c8c', fontSize: '12px' }}>
+              <span>CPF: {record.cpf || 'Não informado'}</span>
+              <span>Registro PEP: {pep}</span>
+              <span>Nascimento: {nascimento}</span>
+            </Space>
+          </Space>
+        );
+      },
     },
     {
       title: 'Convênio',
@@ -117,21 +128,31 @@ export const PatientListPage = () => {
         <Space>
           <Button 
             size="small" 
+            // 🔥 MÁGICA 3: O botão de Prontuário ganha destaque azul na tela de Prontuários
+            type={isMedicalRecordsRoute ? "primary" : "default"} 
             icon={<SolutionOutlined />} 
             onClick={() => navigate(`/medical-records/${record.id}`)}
             title="Acessar Prontuário"
-          />
-          <Button 
-            size="small" 
-            icon={<EditOutlined />} 
-            onClick={() => navigate(`/patients/edit/${record.id}`)} 
-          />
-          <Button 
-            size="small" 
-            danger 
-            icon={<DeleteOutlined />} 
-            onClick={() => handleDelete(record.id)} 
-          />
+          >
+            {isMedicalRecordsRoute ? "Abrir Prontuário" : ""}
+          </Button>
+          
+          {/* 🔥 MÁGICA 4: Escondemos as ações de Gestão (Editar/Excluir) se o médico estiver apenas buscando um prontuário */}
+          {!isMedicalRecordsRoute && (
+            <>
+              <Button 
+                size="small" 
+                icon={<EditOutlined />} 
+                onClick={() => navigate(`/patients/edit/${record.id}`)} 
+              />
+              <Button 
+                size="small" 
+                danger 
+                icon={<DeleteOutlined />} 
+                onClick={() => handleDelete(record.id)} 
+              />
+            </>
+          )}
         </Space>
       ),
     },
@@ -140,10 +161,17 @@ export const PatientListPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Title level={2} style={{ margin: 0 }}>Gestão de Pacientes</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/patients/new')}>
-          Novo Paciente
-        </Button>
+        <Title level={2} style={{ margin: 0 }}>
+          {/* 🔥 MÁGICA 5: O Título muda consoante o menu que clicou! */}
+          {isMedicalRecordsRoute ? 'Buscar Prontuário Eletrônico' : 'Gestão de Pacientes'}
+        </Title>
+        
+        {/* 🔥 MÁGICA 6: Só deixa criar novos pacientes na tela de Gestão! */}
+        {!isMedicalRecordsRoute && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/patients/new')}>
+            Novo Paciente
+          </Button>
+        )}
       </div>
 
       <PatientFilters onSearch={handleSearch} onClear={() => handleSearch({})} loading={loading} />

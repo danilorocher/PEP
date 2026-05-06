@@ -23,7 +23,7 @@ export class PrismaPatientRepository implements IPatientRepository {
     );
   }
 
-  async createWithMedicalRecord(patient: Patient, medicalRecordNumero: string, cpfHash: string, cnsHash?: string | null): Promise<Patient> {
+  async createWithMedicalRecord(patient: Patient, _ignoredMedicalRecordNumero: string, cpfHash: string, cnsHash?: string | null): Promise<Patient> {
     const created = await this.prisma.$transaction(async (tx) => {
       const p = await tx.patient.create({
         data: {
@@ -38,8 +38,12 @@ export class PrismaPatientRepository implements IPatientRepository {
         }
       });
 
+      const count = await tx.medicalRecord.count({ where: { tenantId: p.tenantId } });
+      const sequencial = count + 1;
+      const numeroProntuario = `PEP-${String(sequencial).padStart(6, '0')}`;
+
       await tx.medicalRecord.create({
-        data: { tenantId: p.tenantId, patientId: p.id, numero: medicalRecordNumero, status: 'ABERTO' }
+        data: { tenantId: p.tenantId, patientId: p.id, numero: numeroProntuario, status: 'ABERTO' }
       });
 
       return p;
@@ -72,10 +76,22 @@ export class PrismaPatientRepository implements IPatientRepository {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.patient.findMany({ where, skip, take, orderBy: { nomeCompleto: 'asc' } }),
+      this.prisma.patient.findMany({ 
+        where, 
+        skip, 
+        take, 
+        orderBy: { nomeCompleto: 'asc' },
+        // 🔥 MÁGICA 1: Trazemos o número do Prontuário na mesma consulta!
+        include: { medicalRecords: { select: { numero: true }, orderBy: { createdAt: 'desc' }, take: 1 } }
+      }),
       this.prisma.patient.count({ where })
     ]);
-    return { data: data.map(r => this.toDomain(r)!), total };
+    
+    // 🔥 Injeta os dados extras no retorno
+    return { 
+      data: data.map(r => Object.assign(this.toDomain(r)!, { medicalRecords: r.medicalRecords })), 
+      total 
+    };
   }
 
   async update(patient: Patient, cpfHash?: string, cnsHash?: string | null): Promise<void> {

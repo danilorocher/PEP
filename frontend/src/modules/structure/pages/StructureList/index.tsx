@@ -1,30 +1,41 @@
 ﻿import { useEffect, useState, useCallback } from 'react';
-import { Table, Button, message, Space, Typography, Tag, Card, Tabs, Modal, Form, Input, Select, Badge, Row, Col, Statistic, Tooltip } from 'antd';
+import { Table, Button, message, Space, Typography, Tag, Card, Tabs, Badge, Row, Col, Statistic, Tooltip } from 'antd';
 import { PlusOutlined, ApartmentOutlined, LayoutOutlined, MedicineBoxOutlined, ToolOutlined, RestOutlined, CheckCircleOutlined, UserOutlined } from '@ant-design/icons';
 import api from '../../../../shared/services/api';
+// 🔥 MÁGICA 1: Importamos os Modais verdadeiros!
+import { WardFormModal } from '../../components/WardFormModal';
+import { BedFormModal } from '../../components/BedFormModal';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 export const StructureListPage = () => {
   const [loading, setLoading] = useState(false);
-  const [wards, setWards] = useState<any[]>([]); // Alas
-  const [beds, setBeds] = useState<any[]>([]);   // Leitos
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [wards, setWards] = useState<any[]>([]); 
+  const [beds, setBeds] = useState<any[]>([]);   
   const [activeTab, setActiveTab] = useState('1');
+
+  // Controle de estado dos Modais verdadeiros
+  const [wardModal, setWardModal] = useState({ visible: false, data: null });
+  const [bedModal, setBedModal] = useState({ visible: false, data: null });
 
   const fetchStructure = useCallback(async () => {
     setLoading(true);
     try {
+      // Pedimos até 500 registros para garantir que o mapa fica completo sem paginação forçada na tela
       const [wardsRes, bedsRes] = await Promise.all([
-        api.get('/wards').catch(() => ({ data: [] })),
-        api.get('/beds').catch(() => ({ data: [] }))
+        api.get('/wards', { params: { limit: 500 } }).catch(() => ({ data: { data: [] } })),
+        api.get('/beds', { params: { limit: 500 } }).catch(() => ({ data: { data: [] } }))
       ]);
       
-      setWards(Array.isArray(wardsRes.data) ? wardsRes.data : []);
-      setBeds(Array.isArray(bedsRes.data) ? bedsRes.data : []);
+      // 🔥 MÁGICA 2: Lemos os dados corretamente, mesmo se vierem embrulhados na paginação!
+      const wardsList = wardsRes.data?.data || wardsRes.data || [];
+      const bedsList = bedsRes.data?.data || bedsRes.data || [];
+
+      setWards(Array.isArray(wardsList) ? wardsList : []);
+      setBeds(Array.isArray(bedsList) ? bedsList : []);
     } catch (error) {
       console.error('Erro ao carregar estrutura');
+      message.error('Erro ao carregar dados da estrutura.');
     } finally {
       setLoading(false);
     }
@@ -33,6 +44,15 @@ export const StructureListPage = () => {
   useEffect(() => {
     fetchStructure();
   }, [fetchStructure]);
+
+  // 🔥 MÁGICA 3: CÁLCULO DINÂMICO DE OCUPAÇÃO!
+  const totalLeitos = beds.length;
+  const leitosLivres = beds.filter((b: any) => ['LIVRE', 'DISPONIVEL'].includes(b.status)).length;
+  const leitosLimpeza = beds.filter((b: any) => ['LIMPEZA', 'MANUTENCAO'].includes(b.status)).length;
+  const leitosOcupados = beds.filter((b: any) => b.status === 'OCUPADO').length;
+  
+  // Calcula a taxa percentual de ocupação
+  const taxaOcupacao = totalLeitos > 0 ? ((leitosOcupados / totalLeitos) * 100).toFixed(1) : '0.0';
 
   const wardColumns = [
     {
@@ -50,7 +70,7 @@ export const StructureListPage = () => {
     {
       title: 'Capacidade',
       key: 'capacidade',
-      render: (rec: any) => `${rec.totalLeitos || 0} Leitos`
+      render: (rec: any) => `${rec.capacidade || 0} Leitos`
     },
     {
       title: 'Status Operacional',
@@ -61,7 +81,7 @@ export const StructureListPage = () => {
     {
       title: 'Ações',
       key: 'actions',
-      render: () => <Button size="small">Editar</Button>
+      render: (rec: any) => <Button size="small" onClick={() => setWardModal({ visible: true, data: rec })}>Editar</Button>
     }
   ];
 
@@ -83,13 +103,14 @@ export const StructureListPage = () => {
       key: 'status',
       render: (status: string) => {
         const colors: any = {
+          LIVRE: { color: 'green', label: 'Livre', icon: <CheckCircleOutlined /> },
           DISPONIVEL: { color: 'green', label: 'Livre', icon: <CheckCircleOutlined /> },
           OCUPADO: { color: 'red', label: 'Ocupado', icon: <UserOutlined /> },
-          LIMPEZA: { color: 'orange', label: 'Higienização', icon: <RestOutlined /> },
+          LIMPEZA: { color: 'orange', label: 'Limpeza', icon: <RestOutlined /> },
           MANUTENCAO: { color: 'volcano', label: 'Manutenção', icon: <ToolOutlined /> },
         };
         const config = colors[status] || { color: 'default', label: status };
-        return <Tag color={config.color}>{config.label}</Tag>;
+        return <Tag color={config.color} icon={config.icon}>{config.label}</Tag>;
       }
     },
     {
@@ -101,12 +122,12 @@ export const StructureListPage = () => {
     {
       title: 'Ações',
       key: 'actions',
-      render: () => (
+      render: (rec: any) => (
         <Space>
            <Tooltip title="Mudar Status (Limpeza/Manutenção)">
-            <Button size="small" icon={<ToolOutlined />} />
+            <Button size="small" icon={<ToolOutlined />} onClick={() => setBedModal({ visible: true, data: rec })} />
           </Tooltip>
-          <Button size="small">Editar</Button>
+          <Button size="small" onClick={() => setBedModal({ visible: true, data: rec })}>Editar</Button>
         </Space>
       )
     }
@@ -116,7 +137,10 @@ export const StructureListPage = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
         <Title level={2}>Estrutura Hospitalar</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+          if (activeTab === '1') setWardModal({ visible: true, data: null });
+          else setBedModal({ visible: true, data: null });
+        }}>
           {activeTab === '1' ? 'Nova Ala' : 'Novo Leito'}
         </Button>
       </div>
@@ -129,17 +153,18 @@ export const StructureListPage = () => {
         </Col>
         <Col span={6}>
           <Card bordered={false}>
-            <Statistic title="Leitos Livres" value={beds.filter((b: any) => b.status === 'DISPONIVEL').length} valueStyle={{ color: '#3f8600' }} />
+            <Statistic title="Leitos Livres" value={leitosLivres} valueStyle={{ color: '#3f8600' }} />
           </Card>
         </Col>
         <Col span={6}>
           <Card bordered={false}>
-            <Statistic title="Em Higienização" value={beds.filter((b: any) => b.status === 'LIMPEZA').length} valueStyle={{ color: '#fa8c16' }} />
+            <Statistic title="Em Manutenção/Limpeza" value={leitosLimpeza} valueStyle={{ color: '#fa8c16' }} />
           </Card>
         </Col>
         <Col span={6}>
           <Card bordered={false}>
-            <Statistic title="Taxa de Ocupação" value="78%" suffix="%" />
+            {/* Exibe o percentual calculado em tempo real! */}
+            <Statistic title="Taxa de Ocupação" value={taxaOcupacao} suffix="%" valueStyle={{ color: Number(taxaOcupacao) > 80 ? '#cf1322' : '#1890ff' }} />
           </Card>
         </Col>
       </Row>
@@ -153,6 +178,7 @@ export const StructureListPage = () => {
                 rowKey="id" 
                 loading={loading}
                 locale={{ emptyText: 'Nenhuma ala cadastrada' }}
+                pagination={{ pageSize: 15 }}
             />
           </Tabs.TabPane>
           <Tabs.TabPane tab={<span><MedicineBoxOutlined /> Mapa de Leitos</span>} key="2">
@@ -162,31 +188,27 @@ export const StructureListPage = () => {
                 rowKey="id" 
                 loading={loading}
                 locale={{ emptyText: 'Nenhum leito cadastrado' }}
+                pagination={{ pageSize: 15 }}
             />
           </Tabs.TabPane>
         </Tabs>
       </Card>
 
-      <Modal 
-        title={activeTab === '1' ? "Cadastrar Nova Ala" : "Cadastrar Novo Leito"} 
-        open={isModalVisible} 
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-      >
-        <Form layout="vertical" onFinish={() => { message.success('Salvo com sucesso'); setIsModalVisible(false); }}>
-          <Form.Item label="Nome / Número" name="nome" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          {activeTab === '2' && (
-            <Form.Item label="Ala Pertencente" name="wardId" rules={[{ required: true }]}>
-              <Select placeholder="Selecione a ala">
-                {wards.map((w: any) => <Option key={w.id} value={w.id}>{w.nome}</Option>)}
-              </Select>
-            </Form.Item>
-          )}
-          <Button type="primary" block htmlType="submit">Salvar Estrutura</Button>
-        </Form>
-      </Modal>
+      {/* 🔥 MÁGICA 4: O esqueleto de teste foi trocado pelos modais reais! */}
+      <WardFormModal 
+        visible={wardModal.visible}
+        initialValues={wardModal.data}
+        onCancel={() => setWardModal({ visible: false, data: null })}
+        onSuccess={() => { setWardModal({ visible: false, data: null }); fetchStructure(); }}
+      />
+
+      <BedFormModal 
+        visible={bedModal.visible}
+        initialValues={bedModal.data}
+        wards={wards} // Passamos as alas para dentro do modal do leito!
+        onCancel={() => setBedModal({ visible: false, data: null })}
+        onSuccess={() => { setBedModal({ visible: false, data: null }); fetchStructure(); }}
+      />
     </div>
   );
 };

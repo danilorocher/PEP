@@ -16,6 +16,8 @@ import { EvolutionTimeline } from '../../components/EvolutionTimeline';
 import { EvolutionFormModal } from '../../components/EvolutionFormModal';
 import { EvolutionHistoryModal } from '../../components/EvolutionHistoryModal';
 import { PrescriptionList } from '../../../prescriptions/components/PrescriptionList';
+// 🔥 NOVO IMPORT AQUI
+import { PatientExamList } from '../../../exams/components/PatientExamList';
 
 import { VitalSigns } from '../../../assistance/components/VitalSigns';
 import { FluidBalance } from '../../../assistance/components/FluidBalance';
@@ -51,7 +53,7 @@ export const MedicalRecordViewPage = () => {
           api.get(`/medical-records/${rRes.data.id}/evolutions`, { params: { page: 1, limit: 100 } }),
           api.get(`/assistance/vital-signs/patient/${patientId}`).catch(() => ({ data: { data: [] } }))
         ]);
-        setEvolutions(eRes.data.data);
+        setEvolutions(eRes.data.data || eRes.data);
         setVitalHistory(vRes.data?.data || []);
       }
     } catch (error: any) {
@@ -116,7 +118,8 @@ export const MedicalRecordViewPage = () => {
     {
       key: 'exams',
       label: <span><FileSearchOutlined /> Exames</span>,
-      children: <div style={{ padding: 24, textAlign: 'center' }}>Módulo de Exames</div>
+      // 🔥 AQUI SUBSTITUÍMOS O PLACEHOLDER PELO COMPONENTE REAL
+      children: <PatientExamList patientId={patientId!} recordId={record.id} hospitalizationId={record?.hospitalizationId} />
     }
   ];
 

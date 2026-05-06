@@ -20,7 +20,8 @@ export const PatientFilters = ({ onSearch, onClear, loading }: PatientFiltersPro
       <Form form={form} layout="vertical" onFinish={onSearch}>
         <Row gutter={16} align="bottom">
           <Col xs={24} sm={8} md={8}>
-            <Form.Item name="nomeCompleto" label="Nome do Paciente" style={{ marginBottom: 0 }}>
+            {/* 🔥 CORREÇÃO: O nome do campo era 'nomeCompleto', agora é 'nome' */}
+            <Form.Item name="nome" label="Nome do Paciente" style={{ marginBottom: 0 }}>
               <Input placeholder="Buscar por nome..." allowClear prefix={<SearchOutlined />} />
             </Form.Item>
           </Col>

@@ -23,6 +23,7 @@ import { SurgicalDashboardPage } from '../modules/surgical-center/pages/Surgical
 import { HospitalBillingDashboard } from '../modules/hospital-billing/pages/HospitalBillingDashboard';
 import { ClinicalDashboard as ClinicalDashboardPage } from '../modules/assistance/components/ClinicalDashboard';
 import { LabDashboardPage } from '../modules/lab/pages/LabDashboard';
+import { ExamCatalogPage } from '../modules/exams/pages/ExamCatalog';
 
 const AppRoutes = () => {
   return (
@@ -44,17 +45,18 @@ const AppRoutes = () => {
         <Route path="/scheduling" element={<MainLayout><SchedulingPage /></MainLayout>} />
         <Route path="/attendance" element={<MainLayout><AttendanceListPage /></MainLayout>} />
         <Route path="/hospitalizations" element={<MainLayout><HospitalizationListPage /></MainLayout>} />
-        <Route path="/medical-records" element={<Navigate to="/patients" replace />} />
+        
+        {/* 🔥 MÁGICA 1: Em vez de redirecionar para /patients, a rota medical-records carrega a lista diretamente! */}
+        <Route path="/medical-records" element={<MainLayout><PatientListPage /></MainLayout>} />
+        
         <Route path="/medical-records/:patientId" element={<MainLayout><MedicalRecordViewPage /></MainLayout>} />
         <Route path="/medication" element={<MainLayout><MedicationListPage /></MainLayout>} />
         <Route path="/reports" element={<MainLayout><ReportsPage /></MainLayout>} />
         <Route path="/billing" element={<MainLayout><BillingListPage /></MainLayout>} />
         <Route path="/hospital-billing" element={<MainLayout><HospitalBillingDashboard /></MainLayout>} />
         <Route path="/exams" element={<MainLayout><ExamListPage /></MainLayout>} />
-        
-        {/* Rota Laboratório (LIS) Corrigida */}
+        <Route path="/exam-catalog" element={<MainLayout><ExamCatalogPage /></MainLayout>} />
         <Route path="/lab" element={<MainLayout><LabDashboardPage /></MainLayout>} />
-
         <Route path="/pharmacy" element={<MainLayout><PharmacyDashboardPage /></MainLayout>} />
         <Route path="/surgical-center" element={<MainLayout><SurgicalDashboardPage /></MainLayout>} />
         <Route path="/assistance" element={<MainLayout><ClinicalDashboardPage data={[]} /></MainLayout>} />
