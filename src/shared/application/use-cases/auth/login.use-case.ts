@@ -1,8 +1,7 @@
 import { Inject, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-// 🔥 CORREÇÃO: Usando bcryptjs para conseguir ler o hash do banco!
-import * as bcrypt from 'bcryptjs'; 
+import * as bcrypt from 'bcryptjs'; // 🔥 PADRONIZADO
 import { IUserRepository, USER_REPOSITORY_TOKEN } from '../../../domain/repositories/user.repository.interface';
 import { RedisService } from '../../../infrastructure/redis/redis.service';
 import { LoginDto } from '../../../../modules/auth/dto/login.dto';
@@ -35,8 +34,6 @@ export class LoginUseCase {
   ) {}
 
   async execute(tenantId: string, ip: string, data: LoginDto): Promise<LoginResponse> {
-    
-    // 🚀 BUSCA GLOBAL: Independentemente do hospital atual, buscamos a identidade central do usuário
     const userAccounts = await this.prisma.user.findMany({
       where: { email: data.email, isActive: true, deletedAt: null },
       include: {
@@ -49,7 +46,6 @@ export class LoginUseCase {
       throw new UnauthorizedException('Credenciais inválidas ou usuário inativo.');
     }
 
-    // Como as contas são unificadas pelo e-mail/CPF, validamos a senha do registro principal
     const mainAccount = userAccounts[0];
     const isPasswordValid = await bcrypt.compare(data.password, mainAccount.password);
 
@@ -61,71 +57,36 @@ export class LoginUseCase {
     let userPermissions = {};
     let currentAccount = mainAccount;
 
-    // 🔥 LÓGICA MASTER ADMIN: Se for o admin@pep.com, ele vê TODOS os hospitais do banco
     if (data.email === this.MASTER_ADMIN_EMAIL) {
       const allTenants = await this.prisma.tenant.findMany({
         where: { isActive: true },
         select: { id: true, name: true, cnpj: true, subdomain: true }
       });
-      units = allTenants.map(t => ({
-        id: t.id,
-        nomeFantasia: t.name,
-        cnpj: t.cnpj,
-        subdomain: t.subdomain
-      }));
-      // Concede permissão total (*) em todos os módulos para o front-end
+      units = allTenants.map(t => ({ id: t.id, nomeFantasia: t.name, cnpj: t.cnpj, subdomain: t.subdomain }));
       userPermissions = { "*": { "*": true } }; 
     } else {
-      // Lógica normal para os outros usuários
-      units = userAccounts.map(acc => ({
-        id: acc.tenant.id,
-        nomeFantasia: acc.tenant.name,
-        cnpj: acc.tenant.cnpj,
-        subdomain: acc.tenant.subdomain
-      }));
-
+      units = userAccounts.map(acc => ({ id: acc.tenant.id, nomeFantasia: acc.tenant.name, cnpj: acc.tenant.cnpj, subdomain: acc.tenant.subdomain }));
       const isGlobalAuth = tenantId === 'GLOBAL_AUTH' || !tenantId;
-      currentAccount = isGlobalAuth 
-        ? mainAccount 
-        : (userAccounts.find(acc => acc.tenant.id === tenantId) || mainAccount);
-
+      currentAccount = isGlobalAuth ? mainAccount : (userAccounts.find(acc => acc.tenant.id === tenantId) || mainAccount);
       userPermissions = currentAccount.role?.permissoes || {};
     }
 
-    // Determina o contexto de banco de dados
     const finalTenantId = (tenantId === 'GLOBAL_AUTH' || !tenantId) ? mainAccount.tenantId : tenantId;
-
-    // Gera os Tokens
-    const payload = { 
-      sub: mainAccount.id, 
-      email: mainAccount.email, 
-      role: data.email === this.MASTER_ADMIN_EMAIL ? 'MASTER_ADMIN' : currentAccount.roleId, 
-      tenantId: finalTenantId 
-    };
     
-    const accessToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') as any,
-    });
+    // 🔥 CORREÇÃO FRONTAL: Envia o NOME do Cargo em vez do UUID para o Frontend liberar as telas!
+    const roleName = data.email === this.MASTER_ADMIN_EMAIL ? 'ADMIN' : currentAccount.roleName;
 
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') as any,
-    });
+    const payload = { sub: mainAccount.id, email: mainAccount.email, role: roleName, tenantId: finalTenantId };
+    
+    const accessToken = this.jwtService.sign(payload, { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: this.configService.get<string>('JWT_EXPIRES_IN') as any });
+    const refreshToken = this.jwtService.sign(payload, { secret: this.configService.get<string>('JWT_REFRESH_SECRET'), expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') as any });
 
     await this.redisService.setRefreshToken(mainAccount.id, refreshToken, 604800);
 
     return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: mainAccount.id,
-        name: mainAccount.nomeCompleto,
-        role: data.email === this.MASTER_ADMIN_EMAIL ? 'MASTER_ADMIN' : currentAccount.roleId,
-        mustChangePassword: mainAccount.mustChangePassword,
-      },
-      units, 
-      permissions: userPermissions
+      accessToken, refreshToken,
+      user: { id: mainAccount.id, name: mainAccount.nomeCompleto, role: roleName, mustChangePassword: mainAccount.mustChangePassword },
+      units, permissions: userPermissions
     };
   }
 }

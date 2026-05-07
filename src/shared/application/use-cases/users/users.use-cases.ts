@@ -2,11 +2,9 @@ import { Inject, Injectable, NotFoundException, BadRequestException } from '@nes
 import { IUserRepository, USER_REPOSITORY_TOKEN } from '../../../domain/repositories/user.repository.interface';
 import { User } from '../../../domain/entities/user.entity';
 import { EncryptionService } from '../../../infrastructure/database/prisma/repositories/services/encryption.service';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs'; // 🔥 PADRONIZADO E SEGURO
 import * as crypto from 'crypto';
 import { CreateUserDto, UpdateUserDto, ChangePasswordDto } from '../../../../modules/users/dto/user.dto';
-
-// 🔥 Paginação
 import { QueryUsersDto } from '../../../../modules/users/dto/query-users.dto';
 import { buildPaginationQuery, buildPaginatedResult } from '../../../infrastructure/utils/prisma-pagination.util';
 
@@ -37,7 +35,6 @@ export class UsersUseCases {
     return newUser;
   }
 
-  // 🔥 PAGINAÇÃO
   async findAll(tenantId: string, query: QueryUsersDto) {
     const { page, limit, search, roleId, isActive } = query;
     const { skip, take } = buildPaginationQuery(page, limit);

@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma/repositories/prisma.service';
 import { EncryptionService } from '../../../infrastructure/database/prisma/repositories/services/encryption.service';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { PlanType } from '@prisma/client';
 import { CreateTenantDto } from '../../../../modules/tenants/dto/create-tenant.dto';
 

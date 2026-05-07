@@ -11,8 +11,8 @@ async function bootstrap() {
 
   // --- CORREÇÃO FINAL DO CORS PARA ACESSO EM REDE ---
   app.enableCors({
-    // 🔥 ADICIONADO: 'http://192.168.8.88:3001' para permitir que o Frontend em outro PC acesse esta API
-    origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://192.168.8.88:3001'], 
+    // 🔥 ADICIONADO: 'http://192.168.8.84:3001' para permitir que o Frontend em outro PC acesse esta API
+    origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://192.168.8.84:3001'], 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'x-tenant-subdomain'],

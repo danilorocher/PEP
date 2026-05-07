@@ -28,7 +28,9 @@ export class EncryptionService {
   decrypt(encryptedData: string): string {
     if (!encryptedData) return encryptedData;
     const parts = encryptedData.split(':');
-    if (parts.length !== 3) throw new Error('Formato de dado criptografado inválido');
+    
+    // 🔥 CORREÇÃO SÊNIOR AQUI: Se não tiver as 3 partes da criptografia (ex: dados do Seed), devolve o texto normal
+    if (parts.length !== 3) return encryptedData;
 
     const iv = Buffer.from(parts[0], 'hex');
     const authTag = Buffer.from(parts[1], 'hex');

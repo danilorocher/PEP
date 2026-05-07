@@ -3,7 +3,6 @@ import { Table, Button, Space, Typography, Tag, message, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../../shared/services/api';
-// 🔥 NOVO: Importação do Drawer de permissões
 import { PermissionsDrawer } from '../../components/PermissionsDrawer';
 
 const { Title, Text } = Typography;
@@ -14,27 +13,39 @@ export const ProfessionalListPage = () => {
   const [data, setData] = useState<any[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   
-  // 🔥 NOVO: Controle de estado do Drawer de permissões
   const [drawer, setDrawer] = useState({ open: false, roleId: '', name: '' });
 
   const fetchProfessionals = useCallback(async (page = 1, pageSize = 10) => {
     setLoading(true);
     try {
-      const response = await api.get('/professionals', {
+      // 1. Chamada para a rota correta de médicos mapeada no backend
+      const response = await api.get('/doctors', {
         params: { page, limit: pageSize },
-      }).catch(err => {
-        console.error('Aviso: Rota de profissionais falhou ou não existe', err.message);
-        return { data: { data: [], total: 0 } }; // Shield contra tela branca
       });
 
-      const listData = response.data?.data || response.data || [];
-      const totalCount = response.data?.total || listData.length || 0;
+      // 2. EXTRAÇÃO CORRETA: O Interceptor coloca a lista em .data e paginação em .meta
+      //
+      const rawData = response.data?.data || [];
+      const totalCount = response.data?.meta?.total || rawData.length || 0;
 
-      setData(Array.isArray(listData) ? listData : []);
+      // 3. Mapeamento para garantir que o CRM apareça na coluna "registroConselho"
+      const mappedData = Array.isArray(rawData) ? rawData.map((d: any) => ({
+        ...d,
+        tipo: d.tipo || 'MEDICO',
+        registroConselho: d.crm || d.registroConselho || '---', 
+        ufConselho: d.ufCrm || d.ufConselho || '',
+      })) : [];
+
+      setData(mappedData);
       setPagination({ current: page, pageSize, total: totalCount });
-    } catch (error) {
-      console.error(error);
-      message.error('Erro ao carregar lista de profissionais');
+    } catch (error: any) {
+      console.error('Erro na listagem:', error);
+      if (error.response?.status === 403) {
+        message.error('Sua sessão expirou ou você não tem permissão. Tente fazer logout e login novamente.');
+      } else {
+        message.error('Erro ao carregar lista de profissionais');
+      }
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -53,7 +64,7 @@ export const ProfessionalListPage = () => {
       cancelText: 'Cancelar',
       onOk: async () => {
         try {
-          await api.delete(`/professionals/${id}`);
+          await api.delete(`/doctors/${id}`); // Ajustado para a rota de doctors
           message.success('Profissional inativado com sucesso');
           fetchProfessionals(pagination.current, pagination.pageSize);
         } catch (error: any) {
@@ -67,9 +78,7 @@ export const ProfessionalListPage = () => {
     switch (role) {
       case 'MEDICO': return 'blue';
       case 'ENFERMEIRO': return 'cyan';
-      case 'TECNICO_ENFERMAGEM': return 'geekblue';
       case 'RECEPCIONISTA': return 'purple';
-      case 'ADMINISTRATIVO': return 'magenta';
       default: return 'default';
     }
   };
@@ -96,9 +105,7 @@ export const ProfessionalListPage = () => {
       key: 'registro',
       render: (rec: any) => {
         if (rec.tipo === 'MEDICO') return `CRM: ${rec.registroConselho || '---'} - ${rec.especialidade?.nome || 'Geral'}`;
-        if (['ENFERMEIRO', 'TECNICO_ENFERMAGEM'].includes(rec.tipo)) return `COREN: ${rec.registroConselho || '---'}`;
-        if (rec.registroConselho) return `${rec.registroConselho} - ${rec.ufConselho || ''}`;
-        return '---';
+        return rec.registroConselho || '---';
       },
     },
     {
@@ -107,7 +114,6 @@ export const ProfessionalListPage = () => {
       key: 'status',
       render: (val: string) => <Tag color={val === 'INATIVO' ? 'error' : 'success'}>{val || 'ATIVO'}</Tag>,
     },
-    // 🔥 NOVA COLUNA: Indica visualmente se o usuário tem login ativo no sistema
     {
       title: 'Acesso ao Sistema',
       key: 'acesso',
@@ -126,8 +132,6 @@ export const ProfessionalListPage = () => {
             icon={<EditOutlined />} 
             onClick={() => navigate(`/professionals/edit/${rec.id}`)} 
           />
-          
-          {/* 🔥 NOVO BOTÃO: Gerir permissões isoladamente */}
           <Button 
             size="small" 
             icon={<SafetyCertificateOutlined />} 
@@ -135,13 +139,7 @@ export const ProfessionalListPage = () => {
             title={rec.userId ? 'Gerir Permissões' : 'Este utilizador não possui acesso ao sistema'}
             onClick={() => setDrawer({ open: true, roleId: rec.user?.roleId, name: rec.nomeCompleto })}
           />
-
-          <Button 
-            size="small" 
-            danger 
-            icon={<DeleteOutlined />} 
-            onClick={() => handleDelete(rec.id)} 
-          />
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(rec.id)} />
         </Space>
       ),
     },
@@ -151,7 +149,6 @@ export const ProfessionalListPage = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <Title level={2} style={{ margin: 0 }}>Gestão de Equipe</Title>
-        
         <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/professionals/new')}>
           Novo Colaborador
         </Button>
@@ -166,7 +163,6 @@ export const ProfessionalListPage = () => {
         onChange={(newPagination: any) => fetchProfessionals(newPagination.current, newPagination.pageSize)}
       />
 
-      {/* 🔥 NOVO: Componente do Drawer que será aberto ao clicar no ícone de certificado */}
       <PermissionsDrawer 
         open={drawer.open}
         roleId={drawer.roleId}
