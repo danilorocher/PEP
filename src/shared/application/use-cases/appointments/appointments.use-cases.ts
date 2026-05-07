@@ -121,4 +121,30 @@ export class AppointmentsUseCases {
     );
     await this.apptRepo.update(updatedAppt);
   }
+  // 🔥 BUG 3 RESOLVIDO: Métodos para gerir a chegada e falta do paciente
+  async arrive(id: string, tenantId: string): Promise<void> {
+    const appt = await this.apptRepo.findById(id, tenantId);
+    if (!appt) throw new NotFoundException('Agendamento não encontrado.');
+
+    const updatedAppt = new Appointment(
+      appt.id, appt.tenantId, appt.patientId, appt.doctorId, appt.specialtyId,
+      appt.dataHora, appt.duracao, appt.tipo, 'CONFIRMADO', // O status CONFIRMADO indica que o paciente está na clínica
+      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id, appt.observacoes,
+      appt.createdAt, new Date(), appt.deletedAt
+    );
+    await this.apptRepo.update(updatedAppt);
+  }
+
+  async miss(id: string, tenantId: string): Promise<void> {
+    const appt = await this.apptRepo.findById(id, tenantId);
+    if (!appt) throw new NotFoundException('Agendamento não encontrado.');
+
+    const updatedAppt = new Appointment(
+      appt.id, appt.tenantId, appt.patientId, appt.doctorId, appt.specialtyId,
+      appt.dataHora, appt.duracao, appt.tipo, 'FALTOU', // Status atualizado para FALTOU
+      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id, appt.observacoes,
+      appt.createdAt, new Date(), appt.deletedAt
+    );
+    await this.apptRepo.update(updatedAppt);
+  }
 }

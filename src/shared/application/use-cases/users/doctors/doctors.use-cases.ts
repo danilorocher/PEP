@@ -2,10 +2,9 @@ import { Inject, Injectable, NotFoundException, BadRequestException } from '@nes
 import { IDoctorRepository, DOCTOR_REPOSITORY_TOKEN } from '../../../../domain/repositories/doctor.repository.interface';
 import { Doctor } from '../../../../domain/entities/doctor.entity';
 import { EncryptionService } from '../../../../infrastructure/database/prisma/repositories/services/encryption.service';
+import { PrismaService } from '../../../../infrastructure/database/prisma/repositories/prisma.service'; // 🔥 IMPORT ADICIONADO
 import * as crypto from 'crypto';
 import { CreateDoctorDto, UpdateDoctorDto } from '../../../../../modules/doctors/dto/doctor.dto';
-
-// 🔥 Paginação
 import { QueryDoctorsDto } from '../../../../../modules/doctors/dto/query-doctors.dto';
 import { buildPaginationQuery, buildPaginatedResult } from '../../../../infrastructure/utils/prisma-pagination.util';
 
@@ -14,7 +13,15 @@ export class DoctorsUseCases {
   constructor(
     @Inject(DOCTOR_REPOSITORY_TOKEN) private readonly doctorRepo: IDoctorRepository,
     private readonly encryption: EncryptionService,
+    private readonly prisma: PrismaService // 🔥 INJEÇÃO DO PRISMA AQUI
   ) {}
+
+  // 🔥 BUG 4 RESOLVIDO: Método para buscar Especialidades reais do Banco de Dados
+  async findAllSpecialties() {
+    return this.prisma.specialty.findMany({ orderBy: { nome: 'asc' } });
+  }
+
+  // ... (mantenha os outros métodos create, findAll, findOne, update, remove intactos)
 
   async create(tenantId: string, data: CreateDoctorDto): Promise<Doctor> {
     const encryptedCpf = this.encryption.encrypt(data.cpf);

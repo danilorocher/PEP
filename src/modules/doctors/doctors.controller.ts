@@ -28,6 +28,14 @@ export class DoctorsController {
   findAll(@Req() req: TenantRequest, @Query() query: QueryDoctorsDto) {
     return this.doctorsUseCases.findAll(req.tenant.id, query);
   }
+
+  // 🔥 BUG 4 RESOLVIDO: Rota exposta. Deve ficar ANTES do @Get(':id')
+  @Get('catalog/specialties')
+  @TransformResponse()
+  @RequirePermissions({ module: 'agendamento', action: 'visualizar' }) 
+  findAllSpecialties() {
+    return this.doctorsUseCases.findAllSpecialties();
+  }
  
   @Get(':id')
   @RequirePermissions({ module: 'medicos', action: 'visualizar' })

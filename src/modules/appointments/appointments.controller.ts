@@ -76,4 +76,19 @@ export class AppointmentsController {
   finish(@Param('id') id: string, @Body() dto: FinishAppointmentDto, @Req() req: TenantRequest) {
     return this.apptUseCases.finish(id, req.tenant.id, dto);
   }
+
+  // 🔥 BUG 3 RESOLVIDO: Rotas expostas para o Frontend
+  @Patch(':id/arrive')
+  @ApiOperation({ summary: 'Marcar paciente como presente (Chegou)' })
+  @RequirePermissions({ module: 'agendamento', action: 'editar' })
+  arrive(@Param('id') id: string, @Req() req: TenantRequest) {
+    return this.apptUseCases.arrive(id, req.tenant.id);
+  }
+
+  @Patch(':id/miss')
+  @ApiOperation({ summary: 'Marcar paciente como faltou' })
+  @RequirePermissions({ module: 'agendamento', action: 'editar' })
+  miss(@Param('id') id: string, @Req() req: TenantRequest) {
+    return this.apptUseCases.miss(id, req.tenant.id);
+  }
 }

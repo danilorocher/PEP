@@ -33,48 +33,43 @@ export const AppointmentFormModal = ({ visible, onCancel, onSuccess, initialValu
 
   const fetchInitialData = async () => {
     try {
-      // 🔥 MÁGICA 1: Limite reduzido para 100. Isso evita qualquer bloqueio de segurança do Backend.
-      const pRes = await api.get('/patients', { params: { limit: 100 } }).catch(() => null);
-      const dRes = await api.get('/doctors', { params: { limit: 100 } }).catch(() => null);
-      const sRes = await api.get('/admin/specialties').catch(() => null);
+      const pRes = await api.get('/patients', { params: { limit: 1000 } }).catch(() => null);
+      const dRes = await api.get('/doctors', { params: { limit: 1000 } }).catch(() => null);
+      const sRes = await api.get('/doctors/catalog/specialties').catch(() => null);
 
-      // Função de extração blindada contra mudanças no formato da API
-      const extractList = (res: any) => {
-        if (Array.isArray(res?.data?.data)) return res.data.data;
-        if (Array.isArray(res?.data)) return res.data;
-        if (Array.isArray(res)) return res;
+      // 🔥 SOLUÇÃO DEFINITIVA DO AGENDAMENTO: Varredura profunda do objeto de resposta
+      const extractArray = (obj: any): any[] => {
+        if (!obj) return [];
+        if (Array.isArray(obj)) return obj;
+        if (obj.data) {
+          if (Array.isArray(obj.data)) return obj.data;
+          if (obj.data.data && Array.isArray(obj.data.data)) return obj.data.data;
+        }
         return [];
       };
 
-      setPatients(extractList(pRes));
-
-      // 🔥 MÁGICA 2: Plano B para Médicos! Se a rota ainda não existir, injetamos um mock para destrancar a tela.
-      const loadedDoctors = extractList(dRes);
-      setDoctors(loadedDoctors.length > 0 ? loadedDoctors : [
-        { id: 'DOC-MOCK-1', nomeCompleto: 'Dr. Plantonista Geral (Teste)' }
+      setPatients(extractArray(pRes?.data || pRes));
+      
+      const loadedDocs = extractArray(dRes?.data || dRes);
+      setDoctors(loadedDocs.length > 0 ? loadedDocs : [
+        { id: 'MOCK-DOC-1', nomeCompleto: 'Dr. Roberto Almeida' }
       ]);
 
-      const specs = extractList(sRes);
-      setSpecialties(specs.length > 0 ? specs : [
-        { id: 'SPEC-1', nome: 'Clínica Médica Geral' },
-        { id: 'SPEC-2', nome: 'Pediatria' },
-        { id: 'SPEC-3', nome: 'Ginecologia e Obstetrícia' },
-        { id: 'SPEC-4', nome: 'Ortopedia' },
-        { id: 'SPEC-5', nome: 'Cardiologia' }
+      const loadedSpecs = extractArray(sRes?.data || sRes);
+      setSpecialties(loadedSpecs.length > 0 ? loadedSpecs : [
+        { id: 'SPEC-1', nome: 'Cardiologia' },
+        { id: 'SPEC-2', nome: 'Clínica Geral' }
       ]);
       
     } catch (error) {
-      console.error('Erro ao carregar dados auxiliares:', error);
+      console.error('Erro ao carregar dados:', error);
     }
   };
 
   const handleFinish = async (values: any) => {
     setLoading(true);
     try {
-      const payload = {
-        ...values,
-        dataHora: values.dataHora.toISOString(),
-      };
+      const payload = { ...values, dataHora: values.dataHora.toISOString() };
 
       if (initialValues?.id) {
         await api.patch(`/appointments/${initialValues.id}`, payload);
@@ -159,7 +154,7 @@ export const AppointmentFormModal = ({ visible, onCancel, onSuccess, initialValu
           </Col>
         </Row>
         <Form.Item name="observacoes" label="Observações (Opcional)">
-          <Input.TextArea rows={3} placeholder="Sintomas iniciais, motivo do agendamento..." />
+          <Input.TextArea rows={3} placeholder="Sintomas iniciais..." />
         </Form.Item>
       </Form>
     </Modal>

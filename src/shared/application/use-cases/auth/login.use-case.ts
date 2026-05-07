@@ -1,7 +1,8 @@
 import { Inject, Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import * as bcrypt from 'bcrypt';
+// 🔥 CORREÇÃO: Usando bcryptjs para conseguir ler o hash do banco!
+import * as bcrypt from 'bcryptjs'; 
 import { IUserRepository, USER_REPOSITORY_TOKEN } from '../../../domain/repositories/user.repository.interface';
 import { RedisService } from '../../../infrastructure/redis/redis.service';
 import { LoginDto } from '../../../../modules/auth/dto/login.dto';

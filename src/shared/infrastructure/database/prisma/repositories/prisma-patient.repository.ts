@@ -81,15 +81,17 @@ export class PrismaPatientRepository implements IPatientRepository {
         skip, 
         take, 
         orderBy: { nomeCompleto: 'asc' },
-        // 🔥 MÁGICA 1: Trazemos o número do Prontuário na mesma consulta!
         include: { medicalRecords: { select: { numero: true }, orderBy: { createdAt: 'desc' }, take: 1 } }
       }),
       this.prisma.patient.count({ where })
     ]);
     
-    // 🔥 Injeta os dados extras no retorno
     return { 
-      data: data.map(r => Object.assign(this.toDomain(r)!, { medicalRecords: r.medicalRecords })), 
+      data: data.map(r => Object.assign(this.toDomain(r)!, { 
+        medicalRecords: r.medicalRecords,
+        // 🔥 BUG 2 RESOLVIDO: O CPF é mascarado para a listagem pública, protegendo a criptografia!
+        cpf: '***.***.***-**' 
+      })), 
       total 
     };
   }

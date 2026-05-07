@@ -38,7 +38,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     return this.toDomain(record);
   }
 
-  // 🔥 Método atualizado para suportar paginação
+// 🔥 Método atualizado para suportar paginação e manter as relações!
   async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Appointment[]; total: number }> {
     const where: any = { tenantId, deletedAt: null };
     
@@ -50,10 +50,26 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.appointment.findMany({ where, skip, take, orderBy: { dataHora: 'asc' }, include: { patient: true, doctor: true } }),
+      this.prisma.appointment.findMany({ 
+        where, 
+        skip, 
+        take, 
+        orderBy: { dataHora: 'asc' }, 
+        // 🔥 Garantimos que o Prisma traz tudo (incluindo a Especialidade que pode faltar)
+        include: { patient: true, doctor: true, specialty: true } 
+      }),
       this.prisma.appointment.count({ where })
     ]);
-    return { data: data.map(r => this.toDomain(r)), total };
+    
+    // 🔥 A MÁGICA: O toDomain limpa, mas nós "anexamos" os objetos de volta logo a seguir!
+    return { 
+      data: data.map(r => Object.assign(this.toDomain(r), {
+        patient: r.patient,
+        doctor: r.doctor,
+        specialty: r.specialty
+      })), 
+      total 
+    };
   }
 
   async update(appointment: Appointment): Promise<void> {
