@@ -22,11 +22,18 @@ export const AttendanceListPage = () => {
         params: { dataInicial: todayStart, dataFinal: todayEnd }
       }).catch(err => {
         console.error('Aviso: Rota de agendamentos falhou', err.message);
-        return { data: { data: [] } }; // Blindagem anti-erro
+        return { data: { data: [] } }; 
       });
 
       const listData = response.data?.data || response.data || [];
-      setData(Array.isArray(listData) ? listData : []);
+      // Ordena a fila pelo horário mais cedo primeiro (UX Sênior)
+      const sortedData = (Array.isArray(listData) ? listData : []).sort((a, b) => {
+        const timeA = dayjs(a.dataHoraInicio || a.dataHora).valueOf();
+        const timeB = dayjs(b.dataHoraInicio || b.dataHora).valueOf();
+        return timeA - timeB;
+      });
+
+      setData(sortedData);
     } catch (error) {
       message.error('Erro ao carregar lista de atendimentos do dia');
     } finally {
@@ -38,16 +45,16 @@ export const AttendanceListPage = () => {
     fetchTodayAttendance();
   }, [fetchTodayAttendance]);
 
-  // FunÃ§Ã£o para a RecepÃ§Ã£o confirmar a chegada do paciente
+  // Função para a Recepção confirmar a chegada do paciente
   const handleCheckIn = async () => {
     try {
-      // Altera o status para AGUARDANDO_ATENDIMENTO (Envia para a fila do mÃ©dico)
+      // Altera o status para AGUARDANDO_ATENDIMENTO (Envia para a fila do médico)
       await api.patch(`/appointments/${checkInModal.appointment.id}/arrive`);
       message.success('Check-in realizado! Paciente na sala de espera.');
       setCheckInModal({ visible: false, appointment: null });
       fetchTodayAttendance();
     } catch (error) {
-      message.error('Erro ao registrar chegada. Verifique a API.');
+      message.error('Erro ao registrar chegada. Verifique se a API suporta esta rota.');
     }
   };
 
@@ -56,10 +63,10 @@ export const AttendanceListPage = () => {
       return <Tag color="blue" icon={<ClockCircleOutlined />}>Previsto</Tag>;
     }
     if (status === 'AGUARDANDO_ATENDIMENTO') {
-      return <Tag color="magenta" icon={<UserOutlined />}>Na RecepÃ§Ã£o / Espera</Tag>;
+      return <Tag color="magenta" icon={<UserOutlined />}>Na Recepção / Espera</Tag>;
     }
     if (status === 'EM_ATENDIMENTO') {
-      return <Tag color="orange" icon={<SyncOutlined spin />}>Em ConsultÃ³rio</Tag>;
+      return <Tag color="orange" icon={<SyncOutlined spin />}>Em Consultório</Tag>;
     }
     if (status === 'REALIZADO') {
       return <Tag color="green">Finalizado</Tag>;
@@ -69,10 +76,13 @@ export const AttendanceListPage = () => {
 
   const columns = [
     {
-      title: 'HorÃ¡rio',
-      dataIndex: 'dataHora',
+      title: 'Horário',
       key: 'hora',
-      render: (val: string) => <Text strong>{val ? dayjs(val).format('HH:mm') : '--:--'}</Text>,
+      render: (rec: any) => {
+        // 🔥 Blindagem: Suporta tanto o modelo antigo quanto o novo da Agenda Visual
+        const hora = rec.dataHoraInicio || rec.dataHora;
+        return <Text strong>{hora ? dayjs(hora).format('HH:mm') : '--:--'}</Text>;
+      },
       width: 100,
     },
     {
@@ -80,7 +90,7 @@ export const AttendanceListPage = () => {
       key: 'paciente',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.patient?.nomeCompleto || 'NÃ£o identificado'}</Text>
+          <Text strong>{rec.patient?.nomeCompleto || 'Não identificado'}</Text>
           <Text type="secondary" style={{ fontSize: '12px' }}>CPF: {rec.patient?.cpf || '---'}</Text>
         </Space>
       ),
@@ -90,7 +100,8 @@ export const AttendanceListPage = () => {
       key: 'procedimento',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.tipo || 'Consulta MÃ©dica'}</Text>
+          {/* 🔥 Lê o tipoConsulta (ex: RETORNO, CIRURGIA) que criamos hoje */}
+          <Text strong>{(rec.tipoConsulta || rec.tipo || 'Consulta Médica').replace('_', ' ')}</Text>
           <Text type="secondary" style={{ fontSize: '12px' }}>{rec.doctor?.nomeCompleto || 'Profissional da Unidade'}</Text>
         </Space>
       ),
@@ -102,11 +113,11 @@ export const AttendanceListPage = () => {
       render: (val: string) => getStatusTag(val),
     },
     {
-      title: 'AÃ§Ãµes da RecepÃ§Ã£o',
+      title: 'Ações da Recepção',
       key: 'acoes',
       render: (rec: any) => (
         <Space>
-          {/* O Check-in sÃ³ aparece se o paciente ainda nÃ£o tiver chegado */}
+          {/* O Check-in só aparece se o paciente ainda não tiver chegado */}
           {(!rec.status || rec.status === 'AGENDADO' || rec.status === 'CONFIRMADO') && (
             <Button 
               type="primary" 
@@ -124,7 +135,7 @@ export const AttendanceListPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-        <Title level={2}>Painel de Atendimento (RecepÃ§Ã£o)</Title>
+        <Title level={2}>Painel de Atendimento (Recepção)</Title>
         <Button icon={<SyncOutlined />} onClick={fetchTodayAttendance}>
           Atualizar Fila
         </Button>
@@ -140,13 +151,13 @@ export const AttendanceListPage = () => {
         />
       </Card>
 
-      {/* Modal de ConfirmaÃ§Ã£o de Check-in */}
+      {/* Modal de Confirmação de Check-in */}
       <Modal
         title="Confirmar Entrada de Paciente"
         open={checkInModal.visible}
         onOk={handleCheckIn}
         onCancel={() => setCheckInModal({ visible: false, appointment: null })}
-        okText="Confirmar e Gerar Senha"
+        okText="Confirmar Entrada"
         cancelText="Cancelar"
       >
         {checkInModal.appointment && (
@@ -154,20 +165,20 @@ export const AttendanceListPage = () => {
             <Descriptions.Item label="Paciente">
               <Text strong>{checkInModal.appointment.patient?.nomeCompleto}</Text>
             </Descriptions.Item>
-            <Descriptions.Item label="HorÃ¡rio Marcado">
-              {dayjs(checkInModal.appointment.dataHora).format('HH:mm')}
+            <Descriptions.Item label="Horário Marcado">
+              {dayjs(checkInModal.appointment.dataHoraInicio || checkInModal.appointment.dataHora).format('HH:mm')}
             </Descriptions.Item>
             <Descriptions.Item label="Profissional">
               {checkInModal.appointment.doctor?.nomeCompleto}
             </Descriptions.Item>
             <Descriptions.Item label="Tipo / Plano">
-              <Tag color="blue">{checkInModal.appointment.tipo || 'Particular/ConvÃªnio'}</Tag>
+              <Tag color="blue">{(checkInModal.appointment.tipoConsulta || checkInModal.appointment.tipo || 'Particular/Convênio').replace('_', ' ')}</Tag>
             </Descriptions.Item>
           </Descriptions>
         )}
         <div style={{ marginTop: 16 }}>
           <Text type="secondary">
-            Ao confirmar, o status passarÃ¡ para "Aguardando Atendimento" e o paciente aparecerÃ¡ na tela do profissional de saÃºde.
+            Ao confirmar, o status passará para "Aguardando Atendimento" e o paciente aparecerá na tela do profissional de saúde (Médico/Enfermeiro).
           </Text>
         </div>
       </Modal>

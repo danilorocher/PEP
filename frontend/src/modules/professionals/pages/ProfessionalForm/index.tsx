@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Form, Input, Button, Card, Row, Col, Select, DatePicker, message, Typography, Space, Tabs, Divider, Modal } from 'antd';
-import { SaveOutlined, ArrowLeftOutlined, IdcardOutlined, UserOutlined, ContactsOutlined, CopyOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, Row, Col, Select, DatePicker, message, Typography, Space, Tabs, Divider, Modal, Alert } from 'antd';
+import { SaveOutlined, ArrowLeftOutlined, IdcardOutlined, UserOutlined, ContactsOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import api from '../../../../shared/services/api';
@@ -15,30 +15,50 @@ export const ProfessionalFormPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
+  const [specialties, setSpecialties] = useState<any[]>([]); // 🔥 NOVO: Estado para as especialidades
   
   const tipoProfissional = Form.useWatch('tipo', form);
   const nomeCompleto = Form.useWatch('nomeCompleto', form);
   const cpf = Form.useWatch('cpf', form);
 
+  const getEndpointByRole = (tipo: string) => {
+    if (tipo === 'MEDICO') return '/doctors';
+    if (['ENFERMEIRO', 'TECNICO_ENFERMAGEM', 'AUXILIAR_ENFERMAGEM'].includes(tipo)) return '/nurses';
+    return '/users'; 
+  };
+
   useEffect(() => {
+    fetchSpecialties(); // 🔥 Busca as especialidades assim que a tela abre
     if (id) loadProfessional();
     else form.setFieldsValue({ status: 'ATIVO', acesso: { criarAcesso: false, permissoes: {} } });
   }, [id]);
 
+  // 🔥 Busca as especialidades no backend
+  const fetchSpecialties = async () => {
+    try {
+      const res = await api.get('/specialties', { params: { limit: 100 } });
+      setSpecialties(res.data?.data || res.data || []);
+    } catch (error) {
+      console.warn("Aviso: Rota de especialidades indisponível ou vazia.");
+    }
+  };
+
   const loadProfessional = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/professionals/${id}`);
-      const data = res.data;
+      const res = await api.get(`/users/${id}`).catch(() => api.get(`/doctors/${id}`));
+      const data = res.data?.data || res.data;
       form.setFieldsValue({
         ...data,
         dataNascimento: data.dataNascimento ? dayjs(data.dataNascimento) : null,
         dataExpedicaoConselho: data.dataExpedicaoConselho ? dayjs(data.dataExpedicaoConselho) : null,
+        // Se for médico e já tiver especialidade salva (ajuste conforme o retorno do seu backend)
+        specialtyId: data.specialties?.[0]?.specialtyId || data.specialtyId || undefined, 
         acesso: {
           criarAcesso: !!data.userId,
-          loginEmail: data.user?.email,
-          roleId: data.user?.roleId,
-          permissoes: data.user?.role?.permissoes || {},
+          loginEmail: data.user?.email || data.email,
+          roleId: data.user?.roleId || data.roleId,
+          permissoes: data.user?.role?.permissoes || data.role?.permissoes || {},
           perfilBase: 'PERSONALIZADO'
         }
       });
@@ -50,7 +70,6 @@ export const ProfessionalFormPage = () => {
     }
   };
 
-  // 🔥 FUNÇÃO PARA EXIBIR A SENHA PROVISÓRIA (Igual ao fluxo de RH do MV)
   const showAccessCreatedModal = (username: string, tempPass: string) => {
     Modal.success({
       title: 'Acesso ao Sistema Gerado!',
@@ -84,26 +103,34 @@ export const ProfessionalFormPage = () => {
         ...values,
         dataNascimento: values.dataNascimento ? values.dataNascimento.toISOString() : null,
         dataExpedicaoConselho: values.dataExpedicaoConselho ? values.dataExpedicaoConselho.toISOString() : null,
+        crm: values.tipo === 'MEDICO' ? values.registroConselho : undefined,
+        ufCrm: values.tipo === 'MEDICO' ? values.ufConselho : undefined,
+        coren: ['ENFERMEIRO', 'TECNICO_ENFERMAGEM'].includes(values.tipo) ? values.registroConselho : undefined,
+        ufCoren: ['ENFERMEIRO', 'TECNICO_ENFERMAGEM'].includes(values.tipo) ? values.ufConselho : undefined,
+        // 🔥 Adicionando a especialidade ao payload para o backend
+        specialtyId: values.tipo === 'MEDICO' ? values.specialtyId : undefined,
       };
 
+      const endpoint = getEndpointByRole(values.tipo);
+
       if (id) {
-        await api.put(`/professionals/${id}`, payload);
+        await api.patch(`${endpoint}/${id}`, payload);
         message.success('Colaborador atualizado com sucesso!');
         navigate('/professionals');
       } else {
-        const res = await api.post('/professionals', payload);
+        const res = await api.post(endpoint, payload);
         
-        // Se o checkbox de criar acesso foi marcado, mostramos o modal de senha
         if (values.acesso?.criarAcesso) {
-           const tempPassword = res.data?.tempPassword || "PEP@2026Prov"; // Fallback caso o backend não envie
-           showAccessCreatedModal(values.acesso.loginEmail, tempPassword);
+           const tempPassword = res.data?.tempPassword || "PEP@2026Prov"; 
+           showAccessCreatedModal(values.acesso.loginEmail || payload.emailPessoal, tempPassword);
         } else {
            message.success('Colaborador cadastrado com sucesso!');
            navigate('/professionals');
         }
       }
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Erro ao salvar colaborador.');
+      message.error(err.response?.data?.message || 'Erro ao salvar colaborador. Verifique os dados.');
+      console.error(err.response?.data);
     } finally {
       setLoading(false);
     }
@@ -125,7 +152,6 @@ export const ProfessionalFormPage = () => {
       <Form form={form} layout="vertical" onFinish={onFinish}>
         <Tabs type="card" defaultActiveKey="1">
           
-          {/* --- ABA 1: DADOS PESSOAIS --- */}
           <TabPane tab={<span><UserOutlined /> Dados Pessoais</span>} key="1">
             <Card bordered={false}>
               <Row gutter={16}>
@@ -164,7 +190,6 @@ export const ProfessionalFormPage = () => {
             </Card>
           </TabPane>
 
-          {/* --- ABA 2: ATUAÇÃO PROFISSIONAL --- */}
           <TabPane tab={<span><IdcardOutlined /> Atuação e Departamentos</span>} key="2">
             <Card bordered={false}>
               <Row gutter={16}>
@@ -213,6 +238,20 @@ export const ProfessionalFormPage = () => {
                   </Form.Item>
                 </Col>
 
+                {/* 🔥 A MÁGICA ACONTECE AQUI: Campo de Especialidade Condicional */}
+                {tipoProfissional === 'MEDICO' && (
+                  <Col span={12}>
+                    <Form.Item name="specialtyId" label="Especialidade Principal" rules={[{ required: true, message: 'Selecione a especialidade' }]}>
+                      <Select size="large" showSearch placeholder="Selecione a especialidade">
+                        {specialties.map(s => <Option key={s.id} value={s.id}>{s.nome}</Option>)}
+                        {/* Fallback mock para não travar seus testes caso o banco esteja vazio */}
+                        {specialties.length === 0 && <Option value="11111111-1111-1111-1111-111111111111">Clínica Médica (Mock)</Option>}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                )}
+
+                {/* Se não for médico, o CNS ocupa o espaço ao lado do Cargo. Se for, ele desce. */}
                 <Col span={12}>
                   <Form.Item name="cns" label="Cartão Nacional de Saúde (CNS)">
                     <Input size="large" placeholder="700.0000.0000.0000" />
@@ -243,7 +282,6 @@ export const ProfessionalFormPage = () => {
             </Card>
           </TabPane>
 
-          {/* --- ABA 3: PERMISSÕES E LOGIN --- */}
           <TabPane tab={<span><ContactsOutlined /> Acessos ao Sistema</span>} key="3">
              <Form.Item name="acesso">
                 <AccessPermissionsPanel 

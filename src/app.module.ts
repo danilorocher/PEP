@@ -38,7 +38,14 @@ import { PharmacyModule } from './modules/pharmacy/pharmacy.module';
 import { SurgicalCenterModule } from './modules/surgical-center/surgical-center.module';
 // 🔥 NOVA IMPORTAÇÃO: MÓDULO DE FATURAMENTO AVANÇADO (CONTA DO PACIENTE)
 import { HospitalBillingModule } from './modules/hospital-billing/hospital-billing.module';
+
+// 🔥 NOVO: IMPORTAÇÕES DOS MÓDULOS DE CONFIGURAÇÃO DINÂMICA
+import { OccupationsModule } from './modules/occupations/occupations.module';
+import { SpecialtiesModule } from './modules/specialties/specialties.module';
+
 import { CacheModule } from './shared/infrastructure/cache/cache.module'; // 🔥 IMPORTAÇÃO DO CACHE
+import { ScheduleModule } from '@nestjs/schedule'; //
+
 
 @Module({
   imports: [
@@ -79,6 +86,9 @@ import { CacheModule } from './shared/infrastructure/cache/cache.module'; // �
     PrismaModule,
     CacheModule, // 🔥 ADICIONADO AQUI: Agora todo o sistema reconhece o RedisService!
 
+    // 🔥 ATUALIZAÇÃO FASE 3: Inicialização do motor de Cron Jobs do NestJS
+    ScheduleModule.forRoot(),
+
     AuthModule,
     UsersModule,
     RolesModule,
@@ -106,6 +116,10 @@ import { CacheModule } from './shared/infrastructure/cache/cache.module'; // �
     SurgicalCenterModule,
     // 🔥 NOVO MÓDULO DE FATURAMENTO AVANÇADO REGISTRADO AQUI
     HospitalBillingModule,
+
+    // 🔥 REGISTRO DOS NOVOS MÓDULOS PARA CARGOS E ESPECIALIDADES
+    OccupationsModule,
+    SpecialtiesModule,
   ],
   providers: [
     {

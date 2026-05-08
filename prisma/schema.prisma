@@ -407,7 +407,7 @@ model Tenant {
   appointments       Appointment[]
 
   examRequests            ExamRequest[]
-  billingGuides             BillingGuide[]
+  billingGuides           BillingGuide[]
   medicationAdministrations MedicationAdministration[]
 
   vitalSigns         VitalSign[]
@@ -428,6 +428,7 @@ model Tenant {
   surgicalResources SurgicalResource[]
   surgicalSchedules SurgicalSchedule[]
   preOpChecklists   PreOpChecklist[]
+  
   anesthesiaRecords AnesthesiaRecord[]
   surgicalReports   SurgicalReport[]
   opmeItems         OPMEItem[]
@@ -440,12 +441,14 @@ model Tenant {
   billingDenials       BillingDenial[]
   drgGroups            DRGGroup[]
 
-  // --- RELAÇÕES LIS ADICIONADAS ---
   labExams             LabExam[]
   labOrders            LabOrder[]
   labSamples           LabSample[]
   labResults           LabResult[]
   labReports           LabReport[]
+
+  // 🔥 NOVO: Relação com a tabela de Cargos (CBO) Dinâmicos
+  occupations          Occupation[]
 
   @@index([deletedAt])
 }
@@ -455,7 +458,7 @@ model Role {
   tenantId        String
   nome            String
   permissoes      Json
-  hashPermissoes  String?   // 🔥 NOVO: Para deduplicação e escalabilidade [cite: 258]
+  hashPermissoes  String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
@@ -463,7 +466,26 @@ model Role {
   users           User[]
 
   @@unique([nome, tenantId])
-  @@index([tenantId, hashPermissoes]) // 🔥 Índice para busca rápida de perfis idênticos [cite: 258]
+  @@index([tenantId, hashPermissoes]) 
+  @@index([tenantId, deletedAt])
+}
+
+// 🔥 NOVO MODELO: Catálogo Dinâmico de Cargos (CBO)
+model Occupation {
+  id          String   @id @default(uuid())
+  tenantId    String
+  nome        String
+  codigoCBO   String?
+  tipoBase    String   // Guarda a categoria estrutural: MEDICO, ENFERMEIRO, ADMINISTRATIVO
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  users       User[]
+  doctors     Doctor[]
+  nurses      Nurse[]
+
   @@index([tenantId, deletedAt])
 }
 
@@ -472,7 +494,7 @@ model User {
   tenantId           String
   roleId             String
   nomeCompleto       String
-  cpf                String // Criptografado
+  cpf                String 
   cpfHash            String?
   dataNascimento     DateTime?
   sexo               Gender?
@@ -485,6 +507,11 @@ model User {
   dataAdmissao       DateTime?
   mustChangePassword Boolean   @default(false)
   ultimoAcesso       DateTime?
+
+  // 🔥 NOVO: Vínculo com o Cargo CBO selecionado
+  occupationId       String?
+  occupation         Occupation? @relation(fields: [occupationId], references: [id])
+
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   deletedAt          DateTime?
@@ -514,7 +541,6 @@ model User {
   preOpChecklistsFilled  PreOpChecklist[]
   postOpChecklistsFilled PostOpChecklist[]
 
-  // --- RELAÇÕES LIS ADICIONADAS ---
   labOrdersRequested  LabOrder[]  @relation("DoctorLabOrders")
   labSamplesCollected LabSample[] @relation("NurseLabSamples")
   labResultsReleased  LabResult[] @relation("PathologistLabResults")
@@ -555,7 +581,7 @@ model Doctor {
   tenantId              String
   userId                String?           @unique
   nomeCompleto          String
-  cpf                   String // Criptografado
+  cpf                   String 
   cpfHash               String?
   crm                   String
   ufCrm                 String
@@ -567,6 +593,11 @@ model Doctor {
   registroSecundario    String?
   assinaturaDigitalPath String?
   status                EntityStatus      @default(ATIVO)
+
+  // 🔥 NOVO: Vínculo com o Cargo CBO selecionado
+  occupationId          String?
+  occupation            Occupation?       @relation(fields: [occupationId], references: [id])
+
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   deletedAt             DateTime?
@@ -615,7 +646,7 @@ model Nurse {
   tenantId           String
   userId             String?       @unique
   nomeCompleto       String
-  cpf                String // Criptografado
+  cpf                String 
   cpfHash            String?
   coren              String
   ufCoren            String
@@ -625,6 +656,11 @@ model Nurse {
   cnsHash            String?
   podePrescrever     Boolean       @default(false)
   status             EntityStatus  @default(ATIVO)
+
+  // 🔥 NOVO: Vínculo com o Cargo CBO selecionado
+  occupationId       String?
+  occupation         Occupation?   @relation(fields: [occupationId], references: [id])
+
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   deletedAt          DateTime?
@@ -775,7 +811,7 @@ model Patient {
   tenantId                String
   convenioId              String?
   nomeCompleto            String
-  cpf                     String // Criptografado
+  cpf                     String 
   cpfHash                 String?
   cns                     String?
   cnsHash                 String?
@@ -817,7 +853,6 @@ model Patient {
   surgicalSchedules SurgicalSchedule[]
   hospitalAccounts  HospitalAccount[]
 
-  // --- RELAÇÕES LIS ADICIONADAS ---
   labOrders         LabOrder[]
 
   @@unique([cpfHash, tenantId])
@@ -864,7 +899,7 @@ model ClinicalEvolution {
   profissionalId       String
   cid10Id              String?
   tipoProfissional     ProfType
-  descricao            String // Criptografado (LGPD)
+  descricao            String 
   dataHora             DateTime         @default(now())
   versao               Int              @default(1)
   assinadoDigitalmente Boolean          @default(false)
@@ -900,24 +935,24 @@ model ClinicalEvolutionHistory {
 // 5. PRESCRIÇÕES E EXAMES
 // ==========================================
 model Prescription {
-  id                   String           @id @default(uuid())
-  tenantId             String
-  medicalRecordId      String
-  hospitalizationId    String?
-  prescritoPor         String
-  tipoPrescrito        ProfType
-  dataHora             DateTime         @default(now())
-  status               PrescStatus      @default(ATIVA)
-  observacoes          String?
-  assinadaDigitalmente Boolean          @default(false)
-  assinaturaHash       String?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  deletedAt            DateTime?
-  tenant               Tenant           @relation(fields: [tenantId], references: [id])
-  medicalRecord        MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
-  hospitalization      Hospitalization? @relation(fields: [hospitalizationId], references: [id])
-  prescritor           User             @relation(fields: [prescritoPor], references: [id])
+  id                    String           @id @default(uuid())
+  tenantId              String
+  medicalRecordId       String
+  hospitalizationId     String?
+  prescritoPor          String
+  tipoPrescrito         ProfType
+  dataHora              DateTime         @default(now())
+  status                PrescStatus      @default(ATIVA)
+  observacoes           String?
+  assinadaDigitalmente  Boolean          @default(false)
+  assinaturaHash        String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  deletedAt             DateTime?
+  tenant                Tenant           @relation(fields: [tenantId], references: [id])
+  medicalRecord         MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
+  hospitalization       Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  prescritor            User             @relation(fields: [prescritoPor], references: [id])
 
   items PrescriptionItem[]
 
@@ -1074,7 +1109,7 @@ model Appointment {
   convenioId         String?
   cid10Id            String?
   dataHora           DateTime
-  duracao            Int // em minutos
+  duracao            Int 
   tipo               ApptType
   status             ApptStatus @default(AGENDADO)
   motivoCancelamento String?
@@ -1167,22 +1202,22 @@ model VitalSign {
 
   dataHora DateTime @default(now())
 
-  systolicPressure  Int // Pressão Sistólica (mmHg)
-  diastolicPressure Int // Pressão Diastólica (mmHg)
-  temperature       Float // Temperatura (ºC)
-  heartRate         Int // Frequência Cardíaca (bpm)
-  respiratoryRate   Int // Frequência Respiratória (irpm)
-  spo2              Int // Saturação de O2 (%)
-  painScale         Int // Escala de Dor 
+  systolicPressure  Int 
+  diastolicPressure Int 
+  temperature       Float 
+  heartRate         Int 
+  respiratoryRate   Int 
+  spo2              Int 
+  painScale         Int 
 
-  observacoes     String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  deletedAt       DateTime?
-  tenant          Tenant           @relation(fields: [tenantId], references: [id])
-  patient         Patient          @relation(fields: [patientId], references: [id])
-  hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
-  registeredBy    User             @relation(fields: [registeredById], references: [id])
+  observacoes       String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deletedAt         DateTime?
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  patient           Patient          @relation(fields: [patientId], references: [id])
+  hospitalization   Hospitalization? @relation(fields: [hospitalizationId], references: [id])
+  registeredBy      User             @relation(fields: [registeredById], references: [id])
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, patientId, dataHora])
@@ -1199,7 +1234,7 @@ model FluidBalance {
   hospitalizationId String?
   registeredById    String
 
-  dataHoraReferencia DateTime // Data/Turno referente ao balanço
+  dataHoraReferencia DateTime 
 
   totalInput  Float @default(0.0)
   totalOutput Float @default(0.0)
@@ -1281,7 +1316,7 @@ model BradenAssessment {
   activity          Int
   mobility          Int
   nutrition         Int
-  frictionShear     Int // 1 a 3
+  frictionShear     Int 
 
   totalScore    Int
   classificacao String
@@ -1336,9 +1371,9 @@ model GlasgowAssessment {
 
   dataHora DateTime @default(now())
 
-  eyeOpening      Int // 1 a 4
-  verbalResponse  Int // 1 a 5
-  motorResponse   Int // 1 a 6
+  eyeOpening      Int 
+  verbalResponse  Int 
+  motorResponse   Int 
   pupilReactivity Int?
   totalScore      Int
   classificacao   String
@@ -1362,10 +1397,10 @@ model MedicationStock {
   tenantId       String
   medicationId   String
   lote           String
-  dataFabricacao DateTime?  // 🔥 NOVO: Rastreabilidade
+  dataFabricacao DateTime?
   validade       DateTime
   quantidade     Float
-  localizacao    String // ex: "Farmácia Central", "Farmácia UTI"
+  localizacao    String 
 
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
@@ -1410,7 +1445,7 @@ model DispensationItem {
   id                   String @id @default(uuid())
   dispensationId       String
   prescriptionItemId   String
-  stockId              String // Garante rastreabilidade do lote dispensado
+  stockId              String 
   quantidadeDispensada Float
 
   dispensation     MedicationDispensation @relation(fields: [dispensationId], references: [id], onDelete: Cascade)
@@ -1578,7 +1613,7 @@ model PreOpChecklist {
 
   tenant   Tenant           @relation(fields: [tenantId], references: [id])
   cirurgia SurgicalSchedule @relation(fields: [cirurgiaId], references: [id], onDelete: Cascade)
-  responsavel User            @relation(fields: [profissionalResponsavel], references: [id])
+  responsavel User          @relation(fields: [profissionalResponsavel], references: [id])
 
   @@index([tenantId, cirurgiaId])
 }
@@ -1633,7 +1668,7 @@ model SurgicalReport {
 // 21. CENTRO CIRÚRGICO: OPME (ANVISA)
 // ==========================================
 model OPMEItem {
-  id                   String       @id @default(uuid())
+  id                   String        @id @default(uuid())
   tenantId             String
   nome                 String
   fabricante           String
@@ -1736,7 +1771,7 @@ model HospitalAccountItem {
   unitPrice   Float
   totalPrice  Float
 
-  referenceId  String? // Rastreabilidade: ID do item prescrito, opme, etc.
+  referenceId  String?
   sourceModule SourceModule
 
   timestamp DateTime  @default(now())
@@ -1821,10 +1856,10 @@ model LabExam {
   id                   String          @id @default(uuid())
   tenantId             String
   name                 String
-  code                 String          // ex: HEMO, GLI, PCR
+  code                 String          
   category             LabExamCategory
-  unit                 String?         // mg/dL, g/dL, etc.
-  referenceRangeMale   Json?           // { "min": 70, "max": 99 }
+  unit                 String?
+  referenceRangeMale   Json?           
   referenceRangeFemale Json?
   criticalMin          Float?
   criticalMax          Float?
@@ -1847,7 +1882,7 @@ model LabOrder {
   appointmentId     String?
   hospitalizationId String?
   status            LabOrderStatus @default(REQUESTED)
-  requestedBy       String         // ID do Médico (User)
+  requestedBy       String         
   requestedAt       DateTime       @default(now())
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -1859,7 +1894,6 @@ model LabOrder {
   samples           LabSample[]
   results           LabResult[]
   report            LabReport?
-
   @@index([tenantId, status])
   @@index([tenantId, patientId])
 }
@@ -1868,10 +1902,10 @@ model LabSample {
   id           String          @id @default(uuid())
   tenantId     String
   labOrderId   String
-  sampleType   String          // SANGUE, URINA, etc.
+  sampleType   String          
   barcode      String          @unique
   collectedAt  DateTime?
-  collectedBy  String?         // ID do Técnico/Enf (User)
+  collectedBy  String?         
   status       LabSampleStatus @default(COLLECTED)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
@@ -1895,7 +1929,7 @@ model LabResult {
   referenceMax Float?
   isCritical   Boolean   @default(false)
   releasedAt   DateTime?
-  releasedBy   String?   // ID do Patologista (User)
+  releasedBy   String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -1912,7 +1946,7 @@ model LabReport {
   tenantId         String
   labOrderId       String    @unique
   reportText       String    @db.Text
-  signedBy         String?   // ID do Patologista (User)
+  signedBy         String?
   signedAt         DateTime?
   digitalSignature String?
   createdAt        DateTime  @default(now())

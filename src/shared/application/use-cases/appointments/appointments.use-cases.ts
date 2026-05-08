@@ -147,4 +147,46 @@ export class AppointmentsUseCases {
     );
     await this.apptRepo.update(updatedAppt);
   }
+
+  // --- NOVOS MÉTODOS ADICIONADOS ---
+
+  // Check-in Digital (Totem/Recepção)
+  async digitalCheckin(id: string, tenantId: string): Promise<void> {
+    const appt = await this.apptRepo.findById(id, tenantId);
+    if (!appt) throw new NotFoundException('Agendamento não encontrado.');
+
+    const updatedAppt = new Appointment(
+      appt.id, appt.tenantId, appt.patientId, appt.doctorId, appt.specialtyId,
+      appt.dataHora, appt.duracao, appt.tipo, 'AGUARDANDO_ATENDIMENTO', // Muda o status
+      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id, appt.observacoes,
+      appt.createdAt, new Date(), appt.deletedAt
+    );
+    await this.apptRepo.update(updatedAppt);
+
+    // Dispara notificação para a recepção/painel do médico
+    await this.notificationQueue.add('patient_arrived', {
+      appointmentId: appt.id, doctorId: appt.doctorId, tenantId
+    });
+  }
+
+  // Verifica horários disponíveis em uma data
+  async getAvailability(doctorId: string, tenantId: string, date: string) {
+    const dataBusca = new Date(date);
+    dataBusca.setHours(0, 0, 0, 0);
+    const diaSeguinte = new Date(dataBusca);
+    diaSeguinte.setDate(diaSeguinte.getDate() + 1);
+
+    const { data: agendamentos } = await this.apptRepo.findAll(tenantId, 0, 1000, {
+      doctorId,
+      dataInicial: dataBusca.toISOString(),
+      dataFinal: diaSeguinte.toISOString()
+    });
+
+    // Lógica simplificada: Retorna os slots ocupados para o Frontend processar
+    return agendamentos.map(a => ({
+      inicio: a.dataHora,
+      fim: new Date(new Date(a.dataHora).getTime() + a.duracao * 60000)
+    }));
+  }
+  
 }

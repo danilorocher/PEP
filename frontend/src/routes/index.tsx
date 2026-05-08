@@ -9,7 +9,12 @@ import { PatientFormPage } from '../modules/patients/pages/PatientForm';
 import { ProfessionalListPage } from '../modules/professionals/pages/ProfessionalList';
 import { ProfessionalFormPage } from '../modules/professionals/pages/ProfessionalForm';
 import { StructureListPage } from '../modules/structure/pages/StructureList';
-import { SchedulingPage } from '../modules/scheduling/pages/Scheduling';
+
+// 🔥 IMPORTAÇÕES DO SISTEMA PARAMETRIZÁVEL
+import { SpecialtiesListPage } from '../modules/structure/pages/SpecialtiesList';
+import { OccupationsListPage } from '../modules/structure/pages/OccupationsList';
+
+import { SchedulingPage as AppointmentsCalendarPage } from '../modules/scheduling/pages/Scheduling';
 import { HospitalizationListPage } from '../modules/hospitalizations/pages/HospitalizationList';
 import { MedicalRecordViewPage } from '../modules/medical-records/pages/MedicalRecordView';
 import { MedicationListPage } from '../modules/medication/pages/MedicationList';
@@ -34,22 +39,30 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<MainLayout><DashboardPage /></MainLayout>} />
+        
+        {/* PACIENTES */}
         <Route path="/patients" element={<MainLayout><PatientListPage /></MainLayout>} />
         <Route path="/patients/new" element={<MainLayout><PatientFormPage /></MainLayout>} />
         <Route path="/patients/edit/:id" element={<MainLayout><PatientFormPage /></MainLayout>} />
+        
+        {/* PROFISSIONAIS E GESTÃO */}
         <Route path="/professionals" element={<MainLayout><ProfessionalListPage /></MainLayout>} />
         <Route path="/professionals/new" element={<MainLayout><ProfessionalFormPage /></MainLayout>} />
         <Route path="/professionals/edit/:id" element={<MainLayout><ProfessionalFormPage /></MainLayout>} />
+        
+        {/* 🔥 NOVAS ROTAS DE CONFIGURAÇÃO DO SISTEMA */}
+        <Route path="/occupations" element={<MainLayout><OccupationsListPage /></MainLayout>} />
+        <Route path="/specialties" element={<MainLayout><SpecialtiesListPage /></MainLayout>} />
+        
         <Route path="/companies" element={<MainLayout><CompanyFormPage /></MainLayout>} />
         <Route path="/admin" element={<MainLayout><StructureListPage /></MainLayout>} />
-        <Route path="/scheduling" element={<MainLayout><SchedulingPage /></MainLayout>} />
+        <Route path="/scheduling" element={<MainLayout><AppointmentsCalendarPage /></MainLayout>} />
         <Route path="/attendance" element={<MainLayout><AttendanceListPage /></MainLayout>} />
         <Route path="/hospitalizations" element={<MainLayout><HospitalizationListPage /></MainLayout>} />
         
-        {/* 🔥 MÁGICA 1: Em vez de redirecionar para /patients, a rota medical-records carrega a lista diretamente! */}
         <Route path="/medical-records" element={<MainLayout><PatientListPage /></MainLayout>} />
-        
         <Route path="/medical-records/:patientId" element={<MainLayout><MedicalRecordViewPage /></MainLayout>} />
+        
         <Route path="/medication" element={<MainLayout><MedicationListPage /></MainLayout>} />
         <Route path="/reports" element={<MainLayout><ReportsPage /></MainLayout>} />
         <Route path="/billing" element={<MainLayout><BillingListPage /></MainLayout>} />

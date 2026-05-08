@@ -113,6 +113,11 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       label: 'Sistema',
       children: [
         { key: '/professionals', label: 'Profissionais' }, 
+        
+        // 🔥 NOVOS MENUS ADICIONADOS AQUI:
+        { key: '/occupations', label: 'Cargos / Função (CBO)' },
+        { key: '/specialties', label: 'Especialidades Médicas' },
+        
         { key: '/companies', label: 'Minhas Unidades' },
         { key: '/admin', label: 'Estrutura Hospitalar' },
         { key: '/exam-catalog', label: 'Catálogo de Exames' },
