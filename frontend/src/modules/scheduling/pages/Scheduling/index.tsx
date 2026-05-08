@@ -3,7 +3,8 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { Typography, Card, message, Modal, Form, Select, DatePicker, Button, Space, Spin, Divider } from 'antd';
+import { Typography, Card, message, Modal, Form, Select, DatePicker, Button, Space, Spin, Divider, Popconfirm } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../../../../shared/services/api';
 
@@ -17,16 +18,16 @@ export const SchedulingPage = () => {
 
   // Estados do Modal e Formulário
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null); // 🔥 Controla se é edição/exclusão
   const [patients, setPatients] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
-  const [specialties, setSpecialties] = useState<any[]>([]); // 🔥 NOVO: Estado para Especialidades
+  const [specialties, setSpecialties] = useState<any[]>([]); 
   
   // Estados para a Disponibilidade
   const [fetchingAvailability, setFetchingAvailability] = useState(false);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // 1. Busca inicial de dados
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
@@ -34,7 +35,7 @@ export const SchedulingPage = () => {
         api.get('/appointments'),
         api.get('/patients', { params: { limit: 100 } }), 
         api.get('/doctors', { params: { limit: 100 } }),
-        api.get('/specialties', { params: { limit: 100 } }).catch(() => ({ data: { data: [] } })) // 🔥 Busca as especialidades
+        api.get('/specialties', { params: { limit: 100 } }).catch(() => ({ data: { data: [] } }))
       ]);
 
       const rawAppts = apptRes.data?.data || [];
@@ -61,7 +62,6 @@ export const SchedulingPage = () => {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  // 2. Cores baseadas no status
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'AGENDADO': return '#1890ff';
@@ -74,23 +74,39 @@ export const SchedulingPage = () => {
     }
   };
 
-  // 3. Ação: Clique na grade abre o Modal
   const handleDateClick = (arg: any) => {
     const clickedDate = dayjs(arg.dateStr);
-    
+    setSelectedAppointmentId(null); // Modo de criação
     form.resetFields();
     form.setFieldsValue({ 
       dataConsulta: clickedDate,
-      tipo: 'CONSULTA', // 🔥 AGORA OBEDECE AO ENUM DO PRISMA
+      tipo: 'CONSULTA',
       duracao: 30
     });
-    
     setSelectedTime(clickedDate.format('HH:mm')); 
     setAvailableTimes([]); 
     setIsModalOpen(true);
   };
 
-  // 4. Ação: Drag-and-drop
+  // 🔥 NOVO: Ação ao clicar em um agendamento existente (para Editar ou Excluir)
+  const handleEventClick = (info: any) => {
+    const appt = info.event.extendedProps;
+    setSelectedAppointmentId(info.event.id); // Ativa o modo de edição/exclusão
+    
+    form.setFieldsValue({
+      patientId: appt.patientId,
+      doctorId: appt.doctorId,
+      specialtyId: appt.specialtyId,
+      dataConsulta: dayjs(appt.dataHora),
+      tipo: appt.tipo,
+      duracao: appt.duracao,
+    });
+    
+    setSelectedTime(dayjs(appt.dataHora).format('HH:mm'));
+    setAvailableTimes([dayjs(appt.dataHora).format('HH:mm')]);
+    setIsModalOpen(true);
+  };
+
   const handleEventDrop = async (info: any) => {
     const { event } = info;
     try {
@@ -104,11 +120,9 @@ export const SchedulingPage = () => {
     }
   };
 
-  // 5. Buscar disponibilidade
   const fetchDoctorAvailability = async () => {
     const doctorId = form.getFieldValue('doctorId');
     const date = form.getFieldValue('dataConsulta');
-
     if (!doctorId || !date) return;
 
     setFetchingAvailability(true);
@@ -116,50 +130,59 @@ export const SchedulingPage = () => {
       const res = await api.get(`/appointments/doctor/${doctorId}/availability`, {
         params: { date: date.format('YYYY-MM-DD') } 
       });
-      
       const times = res.data?.data || res.data;
-      if (Array.isArray(times) && times.length > 0) {
-        setAvailableTimes(times);
-      } else {
-        throw new Error('Nenhum horário retornado');
-      }
+      setAvailableTimes(Array.isArray(times) ? times : []);
     } catch (error) {
-      // Mock de segurança caso a API de horários ainda não exista
       setAvailableTimes(['07:00', '07:30', '08:00', '08:30', '09:00', '10:00', '11:00', '14:00', '15:30', '16:00']);
     } finally {
       setFetchingAvailability(false);
     }
   };
 
-  // 6. Submeter o Novo Agendamento
   const handleSaveAppointment = async () => {
     try {
       const values = await form.validateFields();
-      
       if (!selectedTime) {
         message.warning('Por favor, selecione um horário disponível.');
         return;
       }
-
       const dataHoraFinal = dayjs(values.dataConsulta.format('YYYY-MM-DD') + 'T' + selectedTime).toISOString();
-
-      // 🔥 CORREÇÃO MÁXIMA: Payload IDÊNTICO ao exigido pelo CreateAppointmentDto!
-      await api.post('/appointments', {
+      const payload = {
         patientId: values.patientId,
         doctorId: values.doctorId,
-        specialtyId: values.specialtyId, // 🔥 OBRIGATÓRIO NO DTO!
+        specialtyId: values.specialtyId,
         dataHora: dataHoraFinal,   
         duracao: values.duracao,   
-        tipo: values.tipo, // 🔥 DEVE SER: CONSULTA, RETORNO, EXAME ou PROCEDIMENTO
-      });
+        tipo: values.tipo,
+      };
 
-      message.success('Agendamento criado com sucesso!');
+      if (selectedAppointmentId) {
+        // Modo Edição
+        await api.patch(`/appointments/${selectedAppointmentId}`, payload);
+        message.success('Agendamento atualizado com sucesso!');
+      } else {
+        // Modo Criação
+        await api.post('/appointments', payload);
+        message.success('Agendamento criado com sucesso!');
+      }
+
       setIsModalOpen(false);
       fetchInitialData(); 
     } catch (error: any) {
-      if (error.errorFields) return; 
-      message.error(error.response?.data?.message || 'Erro de Validação. Verifique os dados no console.');
-      console.error('Detalhes do Erro 400:', error.response?.data);
+      message.error(error.response?.data?.message || 'Erro ao processar dados.');
+    }
+  };
+
+  // 🔥 NOVO: Função para excluir o agendamento (Chama a rota DELETE da Fase 2)
+  const handleDeleteAppointment = async () => {
+    if (!selectedAppointmentId) return;
+    try {
+      await api.delete(`/appointments/${selectedAppointmentId}`); // Rota DELETE criada na Fase 2
+      message.success('Agendamento excluído com sucesso!');
+      setIsModalOpen(false);
+      fetchInitialData();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Erro ao excluir agendamento.');
     }
   };
 
@@ -177,28 +200,41 @@ export const SchedulingPage = () => {
           slotMaxTime="19:00:00" 
           allDaySlot={false}     
           slotDuration="00:15:00" 
-          slotLabelFormat={{
-            hour: '2-digit',
-            minute: '2-digit',
-            omitZeroMinute: false, 
-          }}
           editable={true}        
           selectable={true}      
           events={events}
           dateClick={handleDateClick}
+          eventClick={handleEventClick} // 🔥 ATIVADO: Agora você pode clicar no card azul!
           eventDrop={handleEventDrop}
           height="75vh"
         />
       </Card>
 
       <Modal
-        title="Novo Agendamento"
+        title={selectedAppointmentId ? "Editar Agendamento" : "Novo Agendamento"}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
-        onOk={handleSaveAppointment}
-        okText="Confirmar Agendamento"
-        cancelText="Cancelar"
-        width={700} 
+        width={700}
+        // 🔥 Customização do Rodapé para incluir o botão de Excluir
+        footer={[
+          selectedAppointmentId && (
+            <Popconfirm
+              key="delete"
+              title="Excluir Agendamento"
+              description="Tem certeza que deseja excluir este agendamento? Esta ação removerá o registro do calendário."
+              onConfirm={handleDeleteAppointment}
+              okText="Sim, excluir"
+              cancelText="Não"
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger icon={<DeleteOutlined />} style={{ float: 'left' }}>
+                Excluir
+              </Button>
+            </Popconfirm>
+          ),
+          <Button key="cancel" onClick={() => setIsModalOpen(false)}>Cancelar</Button>,
+          <Button key="submit" type="primary" onClick={handleSaveAppointment}>Confirmar</Button>
+        ]}
       >
         <Form form={form} layout="vertical" className="mt-4">
           <Form.Item name="patientId" label="Paciente" rules={[{ required: true, message: 'Selecione o paciente' }]}>
@@ -214,12 +250,9 @@ export const SchedulingPage = () => {
               </Select>
             </Form.Item>
 
-            {/* 🔥 NOVO: Campo obrigatório pelo seu DTO! */}
             <Form.Item name="specialtyId" label="Especialidade" rules={[{ required: true, message: 'Obrigatório' }]} style={{ width: 200 }}>
               <Select placeholder="Especialidade">
                 {specialties.map(s => <Option key={s.id} value={s.id}>{s.nome}</Option>)}
-                {/* Fallback caso a API de especialidades não retorne nada ainda */}
-                {specialties.length === 0 && <Option value="11111111-1111-1111-1111-111111111111">Clínica Médica (Mock)</Option>}
               </Select>
             </Form.Item>
 
@@ -231,7 +264,6 @@ export const SchedulingPage = () => {
           <Space style={{ display: 'flex', marginBottom: 8 }} align="baseline">
             <Form.Item name="tipo" label="Tipo de Atendimento" rules={[{ required: true }]} style={{ width: 400 }}>
               <Select placeholder="Selecione o tipo">
-                {/* 🔥 LIMITADO ESTASTRITAMENTE AO ENUM "ApptType" DO PRISMA */}
                 <Option value="CONSULTA">Consulta Médica</Option>
                 <Option value="RETORNO">Retorno</Option>
                 <Option value="EXAME">Exame</Option>
@@ -245,8 +277,6 @@ export const SchedulingPage = () => {
                 <Option value={30}>30 minutos</Option>
                 <Option value={45}>45 minutos</Option>
                 <Option value={60}>1 hora</Option>
-                <Option value={90}>1h 30min</Option>
-                <Option value={120}>2 horas</Option>
               </Select>
             </Form.Item>
           </Space>
@@ -254,11 +284,9 @@ export const SchedulingPage = () => {
           <Divider style={{ margin: '12px 0' }} />
 
           <div>
-            <Typography.Text strong>Selecione o Horário Inicial:</Typography.Text>
-            <div style={{ marginTop: '8px', minHeight: '50px' }}>
-              {fetchingAvailability ? (
-                <Spin tip="Buscando horários..." />
-              ) : availableTimes.length > 0 ? (
+            <Typography.Text strong>Horário:</Typography.Text>
+            <div style={{ marginTop: '8px' }}>
+              {fetchingAvailability ? <Spin /> : (
                 <Space size={[8, 8]} wrap>
                   {availableTimes.map((time) => (
                     <Button 
@@ -270,10 +298,6 @@ export const SchedulingPage = () => {
                     </Button>
                   ))}
                 </Space>
-              ) : (
-                <Typography.Text type="secondary">
-                  Nenhum horário encontrado. Selecione um médico e uma data.
-                </Typography.Text>
               )}
             </div>
           </div>

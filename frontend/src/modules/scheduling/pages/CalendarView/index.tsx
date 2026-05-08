@@ -7,12 +7,19 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { Typography, Card, message } from 'antd';
 import api from '../../../../shared/services/api';
 
+// 🔥 NOVO: Importamos o componente do Modal que você já tem no sistema
+import { AppointmentFormModal } from '../components/AppointmentFormModal';
+
 const { Title } = Typography;
 
 export const AppointmentsCalendarPage = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // 🔥 NOVO: Estados para controlar a exibição do Modal de Edição
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | undefined>(undefined);
 
   const fetchAppointments = useCallback(async () => {
     setLoading(true);
@@ -31,7 +38,7 @@ export const AppointmentsCalendarPage = () => {
       const rawData = apptRes.data?.data || [];
       const mappedEvents = rawData.map((appt: any) => ({
         id: appt.id,
-        resourceId: appt.doctorId, // Alinha na coluna do médico correto
+        resourceId: appt.doctorId,
         title: `${appt.patient?.nomeCompleto || 'Sem Nome'}`,
         start: appt.dataHoraInicio || appt.dataHora, 
         end: appt.dataHoraFim || new Date(new Date(appt.dataHora).getTime() + appt.duracao * 60000),
@@ -53,7 +60,7 @@ export const AppointmentsCalendarPage = () => {
     switch (status) {
       case 'AGENDADO': return '#1890ff';
       case 'CONFIRMADO': return '#52c41a';
-      case 'AGUARDANDO_ATENDIMENTO': return '#13c2c2'; // Check-in feito
+      case 'AGUARDANDO_ATENDIMENTO': return '#13c2c2'; 
       case 'EM_ATENDIMENTO': return '#faad14';
       case 'CANCELADO': return '#f5222d';
       default: return '#d9d9d9';
@@ -64,14 +71,26 @@ export const AppointmentsCalendarPage = () => {
     const { event, newResource } = info;
     try {
       await api.patch(`/appointments/${event.id}/reschedule`, {
-        dataHoraInicio: event.start.toISOString(),
+        dataHora: event.start.toISOString(), 
         doctorId: newResource ? newResource.id : event.extendedProps.doctorId
       });
-      message.success('Agendamento remarcado!');
-    } catch (error) {
-      info.revert();
-      message.error('Falha ao remarcar. Horário indisponível.');
+      message.success('Agendamento remarcado com sucesso!');
+    } catch (error: any) {
+      info.revert(); 
+      message.error(error.response?.data?.message || 'Falha ao remarcar. Horário indisponível.');
     }
+  };
+
+  // 🔥 NOVO: Disparado ao clicar em qualquer agendamento do calendário
+  const handleEventClick = (info: any) => {
+    setSelectedAppointmentId(info.event.id); // Captura o ID do banco de dados
+    setIsModalOpen(true); // Abre o Modal
+  };
+
+  // 🔥 NOVO: Fecha o modal limpando o ID selecionado
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedAppointmentId(undefined);
   };
 
   return (
@@ -96,9 +115,26 @@ export const AppointmentsCalendarPage = () => {
           selectable={true}      
           events={events}
           eventDrop={handleEventDrop}
+          eventClick={handleEventClick} // 🔥 NOVO: Vinculamos a ação de clique aqui!
           height="75vh"
+          cursor="pointer"
         />
       </Card>
+
+      {/* 🔥 NOVO: Renderização Dinâmica do Modal */}
+      {isModalOpen && (
+        <AppointmentFormModal
+          open={isModalOpen}       // Suporte para AntD v5
+          visible={isModalOpen}    // Suporte garantido para AntD v4
+          appointmentId={selectedAppointmentId} // O modal recebe o ID e busca os dados
+          onClose={handleCloseModal}
+          onCancel={handleCloseModal}
+          onSuccess={() => {
+            handleCloseModal();
+            fetchAppointments(); // Recarrega os eventos da tela para mostrar as alterações
+          }}
+        />
+      )}
     </div>
   );
 };

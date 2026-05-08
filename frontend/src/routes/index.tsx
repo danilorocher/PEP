@@ -29,6 +29,8 @@ import { HospitalBillingDashboard } from '../modules/hospital-billing/pages/Hosp
 import { ClinicalDashboard as ClinicalDashboardPage } from '../modules/assistance/components/ClinicalDashboard';
 import { LabDashboardPage } from '../modules/lab/pages/LabDashboard';
 import { ExamCatalogPage } from '../modules/exams/pages/ExamCatalog';
+import { DoctorWorklistPage } from '../modules/attendance/pages/DoctorWorklist';
+import { NurseWorklistPage } from '../modules/attendance/pages/NurseWorklist';
 
 const AppRoutes = () => {
   return (
@@ -73,6 +75,11 @@ const AppRoutes = () => {
         <Route path="/pharmacy" element={<MainLayout><PharmacyDashboardPage /></MainLayout>} />
         <Route path="/surgical-center" element={<MainLayout><SurgicalDashboardPage /></MainLayout>} />
         <Route path="/assistance" element={<MainLayout><ClinicalDashboardPage data={[]} /></MainLayout>} />
+        
+        
+        <Route path="/attendance/doctor" element={<DoctorWorklistPage />} />
+        <Route path="/attendance/nurse" element={<NurseWorklistPage />} />
+
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

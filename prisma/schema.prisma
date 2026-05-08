@@ -8,7 +8,7 @@ datasource db {
 }
 
 // ==========================================
-// ENUMS GLOBAIS E EXISTENTES
+// ENUMS GLOBAIS
 // ==========================================
 enum PlanType {
   BASIC
@@ -344,9 +344,6 @@ enum DenialStatus {
   RESOLVED
 }
 
-// ==========================================
-// NOVOS ENUMS: LABORATÓRIO (LIS)
-// ==========================================
 enum LabOrderStatus {
   REQUESTED
   COLLECTED
@@ -405,6 +402,8 @@ model Tenant {
   prescriptions      Prescription[]
   hospitalizations   Hospitalization[]
   appointments       Appointment[]
+  occupations        Occupation[]
+  specialties        Specialty[]
 
   examRequests            ExamRequest[]
   billingGuides           BillingGuide[]
@@ -447,9 +446,6 @@ model Tenant {
   labResults           LabResult[]
   labReports           LabReport[]
 
-  // 🔥 NOVO: Relação com a tabela de Cargos (CBO) Dinâmicos
-  occupations          Occupation[]
-
   @@index([deletedAt])
 }
 
@@ -470,13 +466,13 @@ model Role {
   @@index([tenantId, deletedAt])
 }
 
-// 🔥 NOVO MODELO: Catálogo Dinâmico de Cargos (CBO)
+// 🔥 NOVO: Catálogo Dinâmico de Cargos (CBO)
 model Occupation {
   id          String   @id @default(uuid())
   tenantId    String
   nome        String
   codigoCBO   String?
-  tipoBase    String   // Guarda a categoria estrutural: MEDICO, ENFERMEIRO, ADMINISTRATIVO
+  tipoBase    String   // MEDICO, ENFERMEIRO, ADMINISTRATIVO
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
@@ -508,7 +504,7 @@ model User {
   mustChangePassword Boolean   @default(false)
   ultimoAcesso       DateTime?
 
-  // 🔥 NOVO: Vínculo com o Cargo CBO selecionado
+  // 🔥 Vínculo com o Cargo Dinâmico
   occupationId       String?
   occupation         Occupation? @relation(fields: [occupationId], references: [id])
 
@@ -594,7 +590,7 @@ model Doctor {
   assinaturaDigitalPath String?
   status                EntityStatus      @default(ATIVO)
 
-  // 🔥 NOVO: Vínculo com o Cargo CBO selecionado
+  // 🔥 Vínculo com o Cargo Dinâmico
   occupationId          String?
   occupation            Occupation?       @relation(fields: [occupationId], references: [id])
 
@@ -620,15 +616,21 @@ model Doctor {
   @@index([tenantId, crm, deletedAt])
 }
 
+// 🔥 Especialidades isoladas por Unidade
 model Specialty {
   id         String   @id @default(uuid())
-  nome       String   @unique
+  tenantId   String
+  nome       String   
   codigoCBOS String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
   doctors      DoctorSpecialty[]
   appointments Appointment[]
+
+  @@unique([nome, tenantId]) 
+  @@index([tenantId])
 }
 
 model DoctorSpecialty {
@@ -657,7 +659,7 @@ model Nurse {
   podePrescrever     Boolean       @default(false)
   status             EntityStatus  @default(ATIVO)
 
-  // 🔥 NOVO: Vínculo com o Cargo CBO selecionado
+  // 🔥 Vínculo com o Cargo Dinâmico
   occupationId       String?
   occupation         Occupation?   @relation(fields: [occupationId], references: [id])
 
@@ -1849,7 +1851,7 @@ model DRGGroup {
 }
 
 // ==========================================
-// 🔬 NOVOS MODELS: MÓDULO LABORATÓRIO (LIS)
+// 🔬 MÓDULO LABORATÓRIO (LIS)
 // ==========================================
 
 model LabExam {
@@ -1887,7 +1889,7 @@ model LabOrder {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   deletedAt         DateTime?
-  tenant            Tenant         @relation(fields: [tenantId], references: [id])
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
   patient           Patient        @relation(fields: [patientId], references: [id])
   requester         User           @relation("DoctorLabOrders", fields: [requestedBy], references: [id])
   

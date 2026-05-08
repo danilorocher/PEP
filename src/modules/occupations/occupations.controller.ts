@@ -1,19 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
 import { OccupationsService } from './occupations.service';
 import { CreateOccupationDto } from './dto/create-occupation.dto';
+import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 
 @Controller('occupations')
+@UseGuards(JwtAuthGuard) // Garante que apenas usuários logados acessem
 export class OccupationsController {
   constructor(private readonly occupationsService: OccupationsService) {}
 
   @Post()
   create(@Req() req: any, @Body() dto: CreateOccupationDto) {
-    return this.occupationsService.create(req.tenantId, dto);
+    // 🔥 CORREÇÃO: O middleware injeta os dados em req.tenant.id
+    return this.occupationsService.create(req.tenant.id, dto);
   }
 
   @Get()
   findAll(@Req() req: any) {
-    return this.occupationsService.findAll(req.tenantId);
+    // 🔥 CORREÇÃO: Acessando o ID da unidade corretamente
+    return this.occupationsService.findAll(req.tenant.id);
   }
 
   @Patch(':id')

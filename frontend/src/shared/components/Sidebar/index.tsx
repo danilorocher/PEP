@@ -10,11 +10,10 @@ import {
   SolutionOutlined,
   SettingOutlined,
   AuditOutlined,
-  BankOutlined,
-  ScissorOutlined,
   WalletOutlined,
   HeartOutlined,
-  ExperimentOutlined 
+  ExperimentOutlined,
+  ScissorOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -41,14 +40,18 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       label: 'Agendamento',
     },
     {
-      key: '/attendance',
+      key: 'attendance-group',
       icon: <IdcardOutlined />,
-      label: 'Atendimento',
+      label: 'Atendimento Clínico',
+      children: [
+        { key: '/attendance', label: 'Painel da Recepção' },
+        { key: '/attendance/doctor', label: 'Fila do Médico' },
+        { key: '/attendance/nurse', label: 'Fila da Enfermagem' },
+      ]
     },
     {
       key: '/medical-records',
       icon: <SolutionOutlined />,
-      // 🔥 AQUI: Expectativa do usuário ajustada!
       label: 'Buscar Prontuário', 
     },
     {
@@ -112,15 +115,19 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       icon: <SettingOutlined />,
       label: 'Sistema',
       children: [
-        { key: '/professionals', label: 'Profissionais' }, 
-        
-        // 🔥 NOVOS MENUS ADICIONADOS AQUI:
-        { key: '/occupations', label: 'Cargos / Função (CBO)' },
-        { key: '/specialties', label: 'Especialidades Médicas' },
-        
+        {
+          key: 'cadastro-group',
+          label: 'Cadastro',
+          children: [
+            { key: '/professionals', label: 'Profissionais' }, 
+            { key: '/occupations', label: 'Cargos / Funções' },
+            { key: '/specialties', label: 'Especialidade Médica' },
+            { key: '/admin', label: 'Estrutura Hospitalar' },
+            { key: '/cid', label: 'CID' }, 
+            { key: '/exam-catalog', label: 'Exames' }, 
+          ]
+        },
         { key: '/companies', label: 'Minhas Unidades' },
-        { key: '/admin', label: 'Estrutura Hospitalar' },
-        { key: '/exam-catalog', label: 'Catálogo de Exames' },
       ]
     },
   ];
@@ -134,19 +141,25 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       top: 0,
       bottom: 0,
     }}>
+      {/* CABEÇALHO DO MENU (Fixo) */}
       <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#001529' }}>
         <h2 style={{ color: 'white', margin: 0 }}>{collapsed ? 'P+' : 'PEP+'}</h2>
       </div>
-      <Menu
-        mode="inline"
-        selectedKeys={[location.pathname]}
-        items={menuItems}
-        onClick={({ key }) => {
-          if (key !== 'admin-group' && key !== 'billing-group') {
-            navigate(key);
-          }
-        }}
-      />
+
+      {/* 🔥 CORREÇÃO DO SCROLL: Envolvemos o Menu numa div que calcula a altura da tela menos o cabeçalho e ativa a rolagem vertical */}
+      <div style={{ height: 'calc(100vh - 64px)', overflowY: 'auto', overflowX: 'hidden' }}>
+        <Menu
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          onClick={({ key }) => {
+            const groupKeys = ['admin-group', 'billing-group', 'attendance-group', 'cadastro-group'];
+            if (!groupKeys.includes(key)) {
+              navigate(key);
+            }
+          }}
+        />
+      </div>
     </Sider>
   );
 };

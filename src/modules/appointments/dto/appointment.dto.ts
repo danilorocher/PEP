@@ -17,6 +17,15 @@ export class CancelAppointmentDto {
 }
 
 export class FinishAppointmentDto {
-  @ApiProperty({ description: 'Obrigatório para o faturamento e histórico clínico' }) 
-  @IsString() @IsNotEmpty() cid10Id: string;
+  // 🔥 Ajuste: CID agora é opcional. Se quiser obrigar, troque @IsOptional() por @IsNotEmpty() e remova a interrogação.
+  @ApiProperty({ required: false, description: 'Obrigatório para o faturamento e histórico clínico' }) 
+  @IsOptional() 
+  @IsString() 
+  cid10Id?: string;
+
+  // 🔥 Novo: Backend agora aceita as observações que o médico digita no Frontend
+  @ApiProperty({ required: false, description: 'Resumo Clínico / Observações Internas' }) 
+  @IsOptional() 
+  @IsString() 
+  observacoes?: string;
 }

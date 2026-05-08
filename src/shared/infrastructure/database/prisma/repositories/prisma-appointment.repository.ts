@@ -33,12 +33,12 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
 
   async findById(id: string, tenantId: string): Promise<Appointment | null> {
     const record = await this.prisma.appointment.findFirst({
+      // 🔥 O filtro deletedAt: null já garante que não buscaremos deletados
       where: { id, tenantId, deletedAt: null }
     });
     return this.toDomain(record);
   }
 
-// 🔥 Método atualizado para suportar paginação e manter as relações!
   async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Appointment[]; total: number }> {
     const where: any = { tenantId, deletedAt: null };
     
@@ -55,13 +55,11 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
         skip, 
         take, 
         orderBy: { dataHora: 'asc' }, 
-        // 🔥 Garantimos que o Prisma traz tudo (incluindo a Especialidade que pode faltar)
         include: { patient: true, doctor: true, specialty: true } 
       }),
       this.prisma.appointment.count({ where })
     ]);
     
-    // 🔥 A MÁGICA: O toDomain limpa, mas nós "anexamos" os objetos de volta logo a seguir!
     return { 
       data: data.map(r => Object.assign(this.toDomain(r), {
         patient: r.patient,
@@ -83,6 +81,14 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     });
   }
 
+  // 🔥 NOVO MÉTODO: Realiza o Soft Delete preenchendo o campo deletedAt
+  async delete(id: string): Promise<void> {
+    await this.prisma.appointment.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+  }
+
   async hasConflict(doctorId: string, tenantId: string, dataHora: Date, duracaoMinutos: number, excludeAppointmentId?: string): Promise<boolean> {
     const dataFimNova = new Date(dataHora.getTime() + duracaoMinutos * 60000);
 
@@ -99,19 +105,17 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
 
     const agendamentos = await this.prisma.appointment.findMany({ where: whereClause });
 
-    // Algoritmo de verificação de sobreposição de horários
     for (const agendamento of agendamentos) {
       const dataInicioExistente = agendamento.dataHora;
       const dataFimExistente = new Date(dataInicioExistente.getTime() + agendamento.duracao * 60000);
 
       if (dataHora < dataFimExistente && dataFimNova > dataInicioExistente) {
-        return true; // Existe conflito (Overlapping)
+        return true;
       }
     }
     return false;
   }
 
-  // Transação: Confirma agendamento e gera Guia de Faturamento se tiver convênio
   async confirmAndGenerateBilling(appointmentId: string, tenantId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const appointment = await tx.appointment.findFirst({
@@ -125,7 +129,6 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
         data: { status: 'CONFIRMADO' }
       });
 
-      // Se possui convênio e ainda não gerou guia, gera a guia TISS em Rascunho
       if (appointment.convenioId) {
         const guiaExiste = await tx.billingGuide.findFirst({
           where: { appointmentId, tenantId, deletedAt: null }

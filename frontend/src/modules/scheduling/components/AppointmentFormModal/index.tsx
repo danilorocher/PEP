@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Form, Select, DatePicker, InputNumber, Input, message, Row, Col } from 'antd';
+import { Modal, Form, Select, DatePicker, InputNumber, Input, message, Row, Col, Button, Popconfirm } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../../../../shared/services/api';
 
@@ -37,7 +38,6 @@ export const AppointmentFormModal = ({ visible, onCancel, onSuccess, initialValu
       const dRes = await api.get('/doctors', { params: { limit: 1000 } }).catch(() => null);
       const sRes = await api.get('/doctors/catalog/specialties').catch(() => null);
 
-      // 🔥 SOLUÇÃO DEFINITIVA DO AGENDAMENTO: Varredura profunda do objeto de resposta
       const extractArray = (obj: any): any[] => {
         if (!obj) return [];
         if (Array.isArray(obj)) return obj;
@@ -86,16 +86,55 @@ export const AppointmentFormModal = ({ visible, onCancel, onSuccess, initialValu
     }
   };
 
+  // 🔥 NOVA AÇÃO: Excluir Agendamento (Fase 3)
+  const handleDelete = async () => {
+    if (!initialValues?.id) return;
+    setLoading(true);
+    try {
+      // Chama a nova rota DELETE que criamos na Fase 2
+      await api.delete(`/appointments/${initialValues.id}`);
+      message.success('Agendamento excluído com sucesso');
+      onSuccess();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Erro ao excluir agendamento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal
       title={initialValues ? "Editar Agendamento" : "Novo Agendamento"}
       open={visible}
       onCancel={onCancel}
-      onOk={() => form.submit()}
       confirmLoading={loading}
       width={650}
       destroyOnClose
-      okText="Salvar Agendamento"
+      // 🔥 Customizamos o rodapé para incluir o botão de excluir
+      footer={[
+        // Botão de excluir só aparece se estivermos EDITANDO um agendamento existente
+        initialValues?.id && (
+          <Popconfirm
+            key="delete-confirm"
+            title="Excluir Agendamento"
+            description="Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita."
+            onConfirm={handleDelete}
+            okText="Sim, excluir"
+            cancelText="Não"
+            okButtonProps={{ danger: true, loading: loading }}
+          >
+            <Button key="delete" danger icon={<DeleteOutlined />} style={{ float: 'left' }}>
+              Excluir
+            </Button>
+          </Popconfirm>
+        ),
+        <Button key="back" onClick={onCancel}>
+          Cancelar
+        </Button>,
+        <Button key="submit" type="primary" loading={loading} onClick={() => form.submit()}>
+          Salvar Agendamento
+        </Button>,
+      ]}
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         <Row gutter={16}>

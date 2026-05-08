@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../shared/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../shared/guards/permissions.guard';
@@ -51,6 +51,34 @@ export class AppointmentsController {
     return this.apptUseCases.findAll(req.tenant.id, query);
   }
 
+  // 🔥 ROTA NOVA ADICIONADA AQUI: Necessária para o Modal de Edição carregar os dados
+  @Get(':id')
+  @ApiOperation({ summary: 'Buscar detalhes de um agendamento específico' })
+  @RequirePermissions({ module: 'agendamento', action: 'visualizar' })
+  findOne(@Param('id') id: string, @Req() req: TenantRequest) {
+    return this.apptUseCases.findOne(id, req.tenant.id);
+  }
+
+  // 🔥 CORREÇÃO APLICADA AQUI: Ajuste no recebimento do Body para suportar o Drag & Drop
+  @Patch(':id/reschedule')
+  @ApiOperation({ summary: 'Remarcar agendamento (Drag & Drop)' })
+  @RequirePermissions({ module: 'agendamento', action: 'editar' })
+  reschedule(
+    @Param('id') id: string, 
+    @Body() dto: { dataHora: string; doctorId: string },
+    @Req() req: TenantRequest
+  ) {
+    return this.apptUseCases.reschedule(id, req.tenant.id, dto.dataHora, dto.doctorId);
+  }
+
+  // 🔥 NOVA ROTA DE EXCLUSÃO (FASE 2):
+  @Delete(':id')
+  @ApiOperation({ summary: 'Excluir agendamento (Soft Delete)' })
+  @RequirePermissions({ module: 'agendamento', action: 'excluir' })
+  remove(@Param('id') id: string, @Req() req: TenantRequest) {
+    return this.apptUseCases.delete(id, req.tenant.id);
+  }
+
   @Patch(':id/confirm')
   @ApiOperation({ summary: 'Confirmar agendamento (Gera Guia de Faturamento se tiver convênio)' })
   @RequirePermissions({ module: 'agendamento', action: 'criar' })
@@ -77,7 +105,6 @@ export class AppointmentsController {
     return this.apptUseCases.finish(id, req.tenant.id, dto);
   }
 
-  // 🔥 BUG 3 RESOLVIDO: Rotas expostas para o Frontend
   @Patch(':id/arrive')
   @ApiOperation({ summary: 'Marcar paciente como presente (Chegou)' })
   @RequirePermissions({ module: 'agendamento', action: 'editar' })

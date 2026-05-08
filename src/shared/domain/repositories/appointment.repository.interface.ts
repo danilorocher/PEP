@@ -8,6 +8,9 @@ export interface IAppointmentRepository {
   findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Appointment[]; total: number }>;
   
   update(appointment: Appointment): Promise<void>;
+
+  // 🔥 NOVO MÉTODO: Contrato para exclusão lógica
+  delete(id: string): Promise<void>;
   
   // Regras de negócio complexas mapeadas para o banco
   hasConflict(doctorId: string, tenantId: string, dataHora: Date, duracaoMinutos: number, excludeAppointmentId?: string): Promise<boolean>;
