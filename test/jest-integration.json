@@ -1,0 +1,19 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testRegex": ".*\\.integration\\.spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "collectCoverageFrom": ["**/*.(t|j)s"],
+  "coverageDirectory": "./coverage/integration",
+  "testEnvironment": "node",
+  "setupFilesAfterEnv": ["<rootDir>/test/setup.integration.ts"],
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1"
+  },
+  "testTimeout": 60000,
+  "detectOpenHandles": true,
+  "forceExit": true,
+  "verbose": true
+}
