@@ -1,5 +1,6 @@
 import { PrismaClient, PlanType, UserRole, Gender } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { seedFinancialDefaults } from './seeds/financial-seed';
+import * as bcrypt from 'bcryptjs'; 
 import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
@@ -14,7 +15,7 @@ async function main() {
   const adminEmail = 'admin@pep.com';
   const adminPasswordHash = await bcrypt.hash('Admin@2024!', 10);
 
-  // 🔥 2. Criar CIDs de Teste (Agora no lugar correto, dentro do async main!)
+  // 2. Criar CIDs de Teste
   console.log('🩺 Criando CIDs de teste...');
   await prisma.cid10.upsert({
     where: { codigo: 'Z000' },
@@ -58,6 +59,9 @@ async function main() {
         cnpj: `00.000.000/000${hosp.prefix === 'sm' ? '1' : '2'}-00`,
       },
     });
+
+    // 🔥 INJEÇÃO CIRÚRGICA FASE 1: Populando dados financeiros deste Tenant
+    await seedFinancialDefaults(prisma, tenant.id);
 
     // 4. Criar a Role ADMIN (Permissão Total)
     const roleAdmin = await prisma.role.upsert({

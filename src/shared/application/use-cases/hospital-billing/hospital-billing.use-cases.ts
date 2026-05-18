@@ -45,7 +45,12 @@ export class HospitalBillingUseCases {
 
   // --- FATURAMENTO SUS ---
   async generateSUSBilling(tenantId: string, accountId: string, data: GenerateSUSBillingDto) {
-    const account = await this.prisma.hospitalAccount.findFirst({ where: { id: accountId, tenantId } });
+    // 🔥 CORREÇÃO: Como a injeção via construtor é apenas o PrismaService, usamos ele!
+    const account = await this.prisma.hospitalAccount.findFirst({
+      where: { id: accountId, tenantId, deletedAt: null }
+    });
+    
+    if (!account) throw new NotFoundException('Conta hospitalar não encontrada.');
     if (account.status === 'OPEN') throw new BadRequestException('A conta deve ser fechada antes de faturar.');
 
     await this.prisma.hospitalAccount.update({

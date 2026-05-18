@@ -9,7 +9,6 @@ export class PrismaDoctorRepository implements IDoctorRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(record: any): Doctor {
-    if (!record) return null;
     const specialtyIds = record.specialties?.map((s: any) => s.specialtyId) || [];
     return new Doctor(
       record.id, record.tenantId, record.userId, record.nomeCompleto, record.cpf,
@@ -25,7 +24,7 @@ export class PrismaDoctorRepository implements IDoctorRepository {
       where: { id, tenantId, deletedAt: null },
       include: { specialties: true },
     });
-    return this.toDomain(record);
+    return record ? this.toDomain(record) : null;
   }
 
   async findByCpf(cpf: string, tenantId: string): Promise<Doctor | null> {
@@ -33,7 +32,7 @@ export class PrismaDoctorRepository implements IDoctorRepository {
       where: { cpf, tenantId, deletedAt: null },
       include: { specialties: true },
     });
-    return this.toDomain(record);
+    return record ? this.toDomain(record) : null;
   }
 
   async findByCrm(crm: string, ufCrm: string, tenantId: string): Promise<Doctor | null> {
@@ -41,7 +40,7 @@ export class PrismaDoctorRepository implements IDoctorRepository {
       where: { crm, ufCrm, tenantId, deletedAt: null },
       include: { specialties: true },
     });
-    return this.toDomain(record);
+    return record ? this.toDomain(record) : null;
   }
 
   async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Doctor[]; total: number }> {

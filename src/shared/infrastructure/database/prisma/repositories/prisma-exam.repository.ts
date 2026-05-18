@@ -8,7 +8,6 @@ export class PrismaExamRepository implements IExamRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(record: any): Exam {
-    if (!record) return null;
     return new Exam(
       record.id, record.tenantId, record.nome, record.tipo, record.tempoMedioResultado,
       record.preparacaoNecessaria, record.codigoInterno, record.codigoTUSS, record.status,
@@ -29,7 +28,7 @@ export class PrismaExamRepository implements IExamRepository {
 
   async findById(id: string, tenantId: string): Promise<Exam | null> {
     const record = await this.prisma.exam.findFirst({ where: { id, tenantId, deletedAt: null } });
-    return this.toDomain(record);
+    return record ? this.toDomain(record) : null;
   }
 
   async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Exam[]; total: number }> {

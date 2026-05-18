@@ -10,7 +10,7 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toPrescriptionDomain(record: any): Prescription {
-    if (!record) return null;
+    // 🔥 CORREÇÃO: Removido o `if (!record) return null;`
     return new Prescription(
       record.id, record.tenantId, record.medicalRecordId, record.hospitalizationId,
       record.prescritoPor, record.tipoPrescrito, record.dataHora, record.status,
@@ -20,7 +20,7 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
   }
 
   private toItemDomain(record: any): PrescriptionItem {
-    if (!record) return null;
+    // 🔥 CORREÇÃO: Removido o `if (!record) return null;`
     return new PrescriptionItem(
       record.id, record.prescriptionId, record.medicationId, record.dosagem,
       record.viaAdministracao, record.frequencia, record.horariosProgramados,
@@ -34,29 +34,16 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
     items: PrescriptionItem[], 
     administrations: MedicationAdministration[]
   ): Promise<Prescription> {
-    
-    // 🔥 1. DECLARAÇÃO DA VARIÁVEL VIP (GOD MODE)
-    let safePrescritorId = prescription.prescritoPor; 
-    const doctor = await this.prisma.doctor.findFirst({ where: { userId: safePrescritorId, deletedAt: null } });
-    
-    if (doctor) {
-      safePrescritorId = doctor.id;
-    } else {
-      // Se for o MASTER_ADMIN testando, usa o primeiro médico do hospital
-      const fallback = await this.prisma.doctor.findFirst({ where: { tenantId: prescription.tenantId, deletedAt: null } });
-      if (fallback) safePrescritorId = fallback.id;
-    }
-
     const created = await this.prisma.$transaction(async (tx) => {
       const p = await tx.prescription.create({
         data: {
           id: prescription.id,
           tenantId: prescription.tenantId,
           medicalRecordId: prescription.medicalRecordId,
-          hospitalizationId: prescription.hospitalizationId || null, // 🔥 2. Proteção de String Vazia
-          prescritoPor: safePrescritorId, // 🔥 3. Uso correto da variável declarada no topo!
+          hospitalizationId: prescription.hospitalizationId,
+          prescritoPor: prescription.prescritoPor,
           tipoPrescrito: prescription.tipoPrescrito as any,
-          dataHora: prescription.dataHora || new Date(),
+          dataHora: prescription.dataHora,
           status: prescription.status as any,
           observacoes: prescription.observacoes,
           assinadaDigitalmente: prescription.assinadaDigitalmente,
@@ -75,7 +62,7 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
             frequencia: item.frequencia,
             horariosProgramados: item.horariosProgramados,
             duracaoDias: item.duracaoDias,
-            dataInicio: item.dataInicio ? new Date(item.dataInicio) : new Date(), // Blindagem de data
+            dataInicio: item.dataInicio,
             dataFim: item.dataFim,
             observacoes: item.observacoes,
             status: item.status as any
@@ -89,7 +76,7 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
             id: admin.id,
             tenantId: admin.tenantId,
             prescriptionItemId: admin.prescriptionItemId,
-            hospitalizationId: admin.hospitalizationId || null,
+            hospitalizationId: admin.hospitalizationId,
             administradoPor: admin.administradoPor,
             dataHoraProgamada: admin.dataHoraProgamada,
             dataHoraAdministrada: admin.dataHoraAdministrada,
@@ -110,7 +97,8 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
       where: { id, tenantId, deletedAt: null },
       include: { items: { where: { deletedAt: null } } }
     });
-    return this.toPrescriptionDomain(record);
+    // 🔥 CORREÇÃO: Trata o nulo aqui
+    return record ? this.toPrescriptionDomain(record) : null;
   }
 
   async findByMedicalRecordId(medicalRecordId: string, tenantId: string, skip: number, take: number): Promise<{ data: Prescription[]; total: number }> {
@@ -140,7 +128,8 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
     const record = await this.prisma.prescriptionItem.findUnique({
       where: { id: itemId }
     });
-    return this.toItemDomain(record);
+    // 🔥 CORREÇÃO: Trata o nulo aqui
+    return record ? this.toItemDomain(record) : null;
   }
 
   async updateItemStatus(itemId: string, status: string): Promise<void> {

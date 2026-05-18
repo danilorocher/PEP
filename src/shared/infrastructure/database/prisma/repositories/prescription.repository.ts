@@ -9,8 +9,8 @@ import { MedicationAdministration } from '../../../../domain/entities/medication
 export class PrismaPrescriptionRepository implements IPrescriptionRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  // 🔥 GARANTIA DE TIPO: O retorno é estritamente "Prescription" (Sem null)
   private toPrescriptionDomain(record: any): Prescription {
-    if (!record) return null;
     return new Prescription(
       record.id, record.tenantId, record.medicalRecordId, record.hospitalizationId,
       record.prescritoPor, record.tipoPrescrito, record.dataHora, record.status,
@@ -19,8 +19,8 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
     );
   }
 
+  // 🔥 GARANTIA DE TIPO: O retorno é estritamente "PrescriptionItem" (Sem null)
   private toItemDomain(record: any): PrescriptionItem {
-    if (!record) return null;
     return new PrescriptionItem(
       record.id, record.prescriptionId, record.medicationId, record.dosagem,
       record.viaAdministracao, record.frequencia, record.horariosProgramados,
@@ -97,7 +97,8 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
       where: { id, tenantId, deletedAt: null },
       include: { items: { where: { deletedAt: null } } }
     });
-    return this.toPrescriptionDomain(record);
+    // 🔥 Trata o nulo de forma segura aqui na ponta
+    return record ? this.toPrescriptionDomain(record) : null;
   }
 
   async findByMedicalRecordId(medicalRecordId: string, tenantId: string, skip: number, take: number): Promise<{ data: Prescription[]; total: number }> {
@@ -127,7 +128,8 @@ export class PrismaPrescriptionRepository implements IPrescriptionRepository {
     const record = await this.prisma.prescriptionItem.findUnique({
       where: { id: itemId }
     });
-    return this.toItemDomain(record);
+    // 🔥 Trata o nulo de forma segura aqui na ponta
+    return record ? this.toItemDomain(record) : null;
   }
 
   async updateItemStatus(itemId: string, status: string): Promise<void> {

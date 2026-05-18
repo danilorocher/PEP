@@ -160,7 +160,7 @@ export class AppointmentsUseCases {
     const updatedAppt = new Appointment(
       appt.id, appt.tenantId, appt.patientId, appt.doctorId, appt.specialtyId,
       appt.dataHora, appt.duracao, appt.tipo, 'EM_ATENDIMENTO', appt.motivoCancelamento,
-      appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id, appt.observacoes,
+      appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id ?? null, appt.observacoes,
       appt.createdAt, new Date(), appt.deletedAt
     );
     await this.apptRepo.update(updatedAppt);
@@ -173,7 +173,7 @@ export class AppointmentsUseCases {
     const updatedAppt = new Appointment(
       appt.id, appt.tenantId, appt.patientId, appt.doctorId, appt.specialtyId,
       appt.dataHora, appt.duracao, appt.tipo, 'REALIZADO', appt.motivoCancelamento,
-      appt.convenioId, appt.numeroGuiaConsulta, data.cid10Id, appt.observacoes,
+      appt.convenioId, appt.numeroGuiaConsulta, data.cid10Id ?? null, appt.observacoes,
       appt.createdAt, new Date(), appt.deletedAt
     );
     await this.apptRepo.update(updatedAppt);
@@ -186,7 +186,7 @@ export class AppointmentsUseCases {
     const updatedAppt = new Appointment(
       appt.id, appt.tenantId, appt.patientId, appt.doctorId, appt.specialtyId,
       appt.dataHora, appt.duracao, appt.tipo, 'CONFIRMADO', 
-      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id, appt.observacoes,
+      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id ?? null, appt.observacoes,
       appt.createdAt, new Date(), appt.deletedAt
     );
     await this.apptRepo.update(updatedAppt);
@@ -199,7 +199,7 @@ export class AppointmentsUseCases {
     const updatedAppt = new Appointment(
       appt.id, appt.tenantId, appt.patientId, appt.doctorId, appt.specialtyId,
       appt.dataHora, appt.duracao, appt.tipo, 'FALTOU', 
-      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id, appt.observacoes,
+      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id ?? null, appt.observacoes,
       appt.createdAt, new Date(), appt.deletedAt
     );
     await this.apptRepo.update(updatedAppt);
@@ -212,7 +212,7 @@ export class AppointmentsUseCases {
     const updatedAppt = new Appointment(
       appt.id, appt.tenantId, appt.patientId, appt.doctorId, appt.specialtyId,
       appt.dataHora, appt.duracao, appt.tipo, 'AGUARDANDO_ATENDIMENTO', 
-      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id, appt.observacoes,
+      appt.motivoCancelamento, appt.convenioId, appt.numeroGuiaConsulta, appt.cid10Id ?? null, appt.observacoes,
       appt.createdAt, new Date(), appt.deletedAt
     );
     await this.apptRepo.update(updatedAppt);

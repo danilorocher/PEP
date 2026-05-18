@@ -8,7 +8,6 @@ export class PrismaRoleRepository implements IRoleRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(record: any): Role {
-    if (!record) return null;
     return new Role(
       record.id, record.tenantId, record.nome, 
       record.permissoes as any as RolePermissions, 
@@ -22,7 +21,7 @@ export class PrismaRoleRepository implements IRoleRepository {
         id: role.id,
         tenantId: role.tenantId,
         nome: role.nome,
-        permissoes: role.permissoes as any, // Salva como Json no Prisma
+        permissoes: role.permissoes as any, 
       },
     });
     return this.toDomain(created);
@@ -32,14 +31,14 @@ export class PrismaRoleRepository implements IRoleRepository {
     const roles = await this.prisma.role.findMany({
       where: { tenantId, deletedAt: null },
     });
-    return roles.map(this.toDomain);
+    return roles.map(r => this.toDomain(r));
   }
 
   async findById(id: string, tenantId: string): Promise<Role | null> {
     const role = await this.prisma.role.findFirst({
       where: { id, tenantId, deletedAt: null },
     });
-    return this.toDomain(role);
+    return role ? this.toDomain(role) : null;
   }
 
   async update(role: Role): Promise<Role> {
@@ -47,7 +46,7 @@ export class PrismaRoleRepository implements IRoleRepository {
       where: { id: role.id },
       data: {
         nome: role.nome,
-        permissoes: role.permissoes as any, // Salva como Json no Prisma
+        permissoes: role.permissoes as any, 
       },
     });
     return this.toDomain(updated);

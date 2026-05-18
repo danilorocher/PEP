@@ -61,7 +61,7 @@ export class LabUseCases {
         patientName: resultRecord.order.patient.nomeCompleto,
         examName: resultRecord.exam.name,
         value: value,
-        limit: numericValue <= resultRecord.exam.criticalMin ? resultRecord.exam.criticalMin : resultRecord.exam.criticalMax
+        limit: numericValue <= (resultRecord.exam?.criticalMin ?? 0) ? (resultRecord.exam?.criticalMin ?? 0) : (resultRecord.exam?.criticalMax ?? 0)
       });
     }
 

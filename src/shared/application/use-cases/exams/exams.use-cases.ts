@@ -18,7 +18,7 @@ export class ExamsUseCases {
   async create(tenantId: string, data: CreateExamDto): Promise<Exam> {
     const newExam = new Exam(
       crypto.randomUUID(), tenantId, data.nome, data.tipo, data.tempoMedioResultado || null,
-      data.preparacaoNecessaria || null, data.codigoInterno || null, data.codigoTUSS,
+      data.preparacaoNecessaria || null, data.codigoInterno || null, data.codigoTUSS ?? '', // 🔥 CORREÇÃO: Fallback para string vazia
       'ATIVO', new Date(), new Date(), null
     );
     return this.examRepo.create(newExam);
@@ -49,7 +49,7 @@ export class ExamsUseCases {
       data.tempoMedioResultado !== undefined ? data.tempoMedioResultado : exam.tempoMedioResultado,
       data.preparacaoNecessaria !== undefined ? data.preparacaoNecessaria : exam.preparacaoNecessaria,
       data.codigoInterno !== undefined ? data.codigoInterno : exam.codigoInterno,
-      data.codigoTUSS || exam.codigoTUSS, data.status || exam.status,
+      data.codigoTUSS ?? exam.codigoTUSS ?? '', data.status || exam.status, // 🔥 CORREÇÃO: Proteção garantindo string
       exam.createdAt, new Date(), exam.deletedAt
     );
     await this.examRepo.update(updatedExam);

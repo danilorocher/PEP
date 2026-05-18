@@ -8,7 +8,6 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(record: any): Appointment {
-    if (!record) return null;
     return new Appointment(
       record.id, record.tenantId, record.patientId, record.doctorId, record.specialtyId,
       record.dataHora, record.duracao, record.tipo, record.status, record.motivoCancelamento,
@@ -33,10 +32,9 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
 
   async findById(id: string, tenantId: string): Promise<Appointment | null> {
     const record = await this.prisma.appointment.findFirst({
-      // 🔥 O filtro deletedAt: null já garante que não buscaremos deletados
       where: { id, tenantId, deletedAt: null }
     });
-    return this.toDomain(record);
+    return record ? this.toDomain(record) : null;
   }
 
   async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Appointment[]; total: number }> {
@@ -81,7 +79,6 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
     });
   }
 
-  // 🔥 NOVO MÉTODO: Realiza o Soft Delete preenchendo o campo deletedAt
   async delete(id: string): Promise<void> {
     await this.prisma.appointment.update({
       where: { id },

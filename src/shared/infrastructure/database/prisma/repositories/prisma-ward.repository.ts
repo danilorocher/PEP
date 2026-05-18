@@ -9,7 +9,6 @@ export class PrismaWardRepository implements IWardRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(record: any): Ward {
-    if (!record) return null;
     return new Ward(
       record.id, record.tenantId, record.nome, record.tipo, record.capacidade,
       record.andar, record.status, record.createdAt, record.updatedAt, record.deletedAt
@@ -17,7 +16,6 @@ export class PrismaWardRepository implements IWardRepository {
   }
 
   private toBedDomain(record: any): Bed {
-    if (!record) return null;
     return new Bed(
       record.id, record.tenantId, record.wardId, record.numero, record.tipo,
       record.status, record.createdAt, record.updatedAt, record.deletedAt
@@ -46,7 +44,7 @@ export class PrismaWardRepository implements IWardRepository {
     const record = await this.prisma.ward.findFirst({
       where: { id, tenantId, deletedAt: null },
     });
-    return this.toDomain(record);
+    return record ? this.toDomain(record) : null;
   }
 
   async update(ward: Ward): Promise<void> {
@@ -96,6 +94,6 @@ export class PrismaWardRepository implements IWardRepository {
       where: { wardId, tenantId, deletedAt: null },
       orderBy: { numero: 'asc' }
     });
-    return beds.map(this.toBedDomain);
+    return beds.map(r => this.toBedDomain(r));
   }
 }

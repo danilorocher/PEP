@@ -4,7 +4,7 @@ import { PrismaService } from '../../shared/infrastructure/database/prisma/repos
 import { getTenantPrisma, TenantPrismaClient } from '../../shared/infrastructure/database/prisma/prisma-tenant.service';
 
 export interface TenantRequest extends Request {
-  tenant?: {
+  tenant: {
     id: string;
     subdomain: string;
   };

@@ -8,7 +8,6 @@ export class PrismaHospitalizationRepository implements IHospitalizationReposito
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(record: any): Hospitalization {
-    if (!record) return null;
     return new Hospitalization(
       record.id, record.tenantId, record.medicalRecordId, record.patientId,
       record.bedId, record.wardId, record.medicoResponsavelId, record.cid10AdmissaoId,
@@ -44,7 +43,7 @@ export class PrismaHospitalizationRepository implements IHospitalizationReposito
     const record = await this.prisma.hospitalization.findFirst({
       where: { id, tenantId, deletedAt: null }
     });
-    return this.toDomain(record);
+    return record ? this.toDomain(record) : null;
   }
 
   async findAll(tenantId: string, skip: number, take: number, filters?: any): Promise<{ data: Hospitalization[]; total: number }> {

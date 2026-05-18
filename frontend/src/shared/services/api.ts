@@ -5,7 +5,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 const currentHost = window.location.hostname;
 const apiURL = import.meta.env.VITE_API_URL || `http://${currentHost}:3000`;
 
-const api = axios.create({
+// 🔥 ALTERAÇÃO AQUI: Adicionado o "export" antes da constante para suportar importação com { api }
+export const api = axios.create({
   baseURL: apiURL,
 });
 
@@ -69,4 +70,5 @@ api.interceptors.response.use(
   }
 );
 
+// Mantido o export padrão para garantir a integridade do resto do sistema
 export default api;

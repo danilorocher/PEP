@@ -87,7 +87,7 @@ export class MedicationAdministrationsUseCases {
 
         await this.consumptionService.recordConsumption(tenantId, {
           patientId: record!.patientId,
-          hospitalizationId: admin.prescriptionItem.prescription.hospitalizationId,
+          hospitalizationId: admin.prescriptionItem.prescription.hospitalizationId ?? undefined,
           tipo: 'MEDICATION',
           description: `Admin. de Medicamento: ${admin.prescriptionItem.medication.nome} (${admin.prescriptionItem.dosagem})`,
           quantity: 1,

@@ -8,7 +8,6 @@ export class PrismaBedRepository implements IBedRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(record: any): Bed {
-    if (!record) return null;
     return new Bed(
       record.id, record.tenantId, record.wardId, record.numero, record.tipo,
       record.status, record.createdAt, record.updatedAt, record.deletedAt
@@ -37,7 +36,7 @@ export class PrismaBedRepository implements IBedRepository {
     const record = await this.prisma.bed.findFirst({
       where: { id, tenantId, deletedAt: null },
     });
-    return this.toDomain(record);
+    return record ? this.toDomain(record) : null;
   }
 
   async findAvailable(tenantId: string, tipo?: string, wardId?: string): Promise<Bed[]> {
@@ -46,7 +45,7 @@ export class PrismaBedRepository implements IBedRepository {
     if (wardId) where.wardId = wardId;
 
     const records = await this.prisma.bed.findMany({ where, orderBy: { numero: 'asc' } });
-    return records.map(this.toDomain);
+    return records.map(r => this.toDomain(r));
   }
 
   async update(bed: Bed): Promise<void> {

@@ -36,11 +36,11 @@ export class AuditInterceptor implements NestInterceptor {
 
     for (const key of Object.keys(data)) {
       if (this.sensitiveKeys.includes(key)) {
-        sanitized[key] = '***REDACTED***';
+        const sanitized: Record<string, any> = {};
       } else if (typeof data[key] === 'object' && data[key] !== null) {
-        sanitized[key] = this.sanitizeData(data[key], seen); // Passa o WeakSet adiante
+        const sanitized: Record<string, any> = {};
       } else {
-        sanitized[key] = data[key];
+        const sanitized: Record<string, any> = {};
       }
     }
 

@@ -22,7 +22,7 @@ export class AuthController {
     @Req() req: TenantRequest,
     @Ip() ip: string,
   ) {
-    const tenantId = req.tenant?.id;
+    const tenantId = req.tenant.id;
     return this.loginUseCase.execute(tenantId, ip, loginDto);
   }
 }

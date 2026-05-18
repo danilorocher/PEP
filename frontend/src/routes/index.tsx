@@ -32,6 +32,11 @@ import { ExamCatalogPage } from '../modules/exams/pages/ExamCatalog';
 import { DoctorWorklistPage } from '../modules/attendance/pages/DoctorWorklist';
 import { NurseWorklistPage } from '../modules/attendance/pages/NurseWorklist';
 
+//IMPORTAÇÕES DO MÓDULO FINANCEIRO
+import { CostCentersList } from '../modules/financial/pages/CostCentersList';
+import { ChartOfAccountsTree } from '../modules/financial/pages/ChartOfAccountsTree';
+import { FinancialTransactionsList } from '../modules/financial/pages/FinancialTransactionsList';
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -52,7 +57,7 @@ const AppRoutes = () => {
         <Route path="/professionals/new" element={<MainLayout><ProfessionalFormPage /></MainLayout>} />
         <Route path="/professionals/edit/:id" element={<MainLayout><ProfessionalFormPage /></MainLayout>} />
         
-        {/* 🔥 NOVAS ROTAS DE CONFIGURAÇÃO DO SISTEMA */}
+        {/*NOVAS ROTAS DE CONFIGURAÇÃO DO SISTEMA */}
         <Route path="/occupations" element={<MainLayout><OccupationsListPage /></MainLayout>} />
         <Route path="/specialties" element={<MainLayout><SpecialtiesListPage /></MainLayout>} />
         
@@ -76,9 +81,13 @@ const AppRoutes = () => {
         <Route path="/surgical-center" element={<MainLayout><SurgicalDashboardPage /></MainLayout>} />
         <Route path="/assistance" element={<MainLayout><ClinicalDashboardPage data={[]} /></MainLayout>} />
         
-        
         <Route path="/attendance/doctor" element={<DoctorWorklistPage />} />
         <Route path="/attendance/nurse" element={<NurseWorklistPage />} />
+
+        {/*ROTAS DO MÓDULO FINANCEIRO (Com MainLayout para manter o menu lateral) */}
+        <Route path="/financial/cost-centers" element={<MainLayout><CostCentersList /></MainLayout>} />
+        <Route path="/financial/chart" element={<MainLayout><ChartOfAccountsTree /></MainLayout>} />
+        <Route path="/financial/transactions" element={<MainLayout><FinancialTransactionsList /></MainLayout>} />
 
       </Route>
 

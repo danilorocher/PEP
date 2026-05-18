@@ -368,6 +368,59 @@ enum LabExamCategory {
   OTHER
 }
 
+// 🔥 ENUMS FINANCEIROS (FASE 1)
+enum CostCenterType {
+  CLINICO
+  ADMINISTRATIVO
+  APOIO
+}
+
+enum AccountingType {
+  RECEITA
+  DESPESA
+  ATIVO
+  PASSIVO
+}
+
+enum AccountNature {
+  DEVEDORA
+  CREDORA
+}
+
+enum TransactionType {
+  RECEITA
+  DESPESA
+}
+
+enum TransactionNature {
+  CONVENIO
+  PARTICULAR
+  SUS
+  CUSTO_OPERACIONAL
+  SALARIO
+  OUTROS
+}
+
+enum TransactionStatus {
+  PENDENTE
+  APROVADO
+  PAGO
+  CANCELADO
+}
+
+enum PaymentMethod {
+  DINHEIRO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  PIX
+  TED
+  DOC
+  CHEQUE
+  CONVENIO
+  SUS
+}
+
+
 // ==========================================
 // 1. TENANT E USUÁRIOS
 // ==========================================
@@ -386,6 +439,7 @@ model Tenant {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   deletedAt          DateTime?
+
   users              User[]
   roles              Role[]
   auditLogs          AuditLog[]
@@ -440,11 +494,16 @@ model Tenant {
   billingDenials       BillingDenial[]
   drgGroups            DRGGroup[]
 
-  labExams             LabExam[]
+  labExams              LabExam[]
   labOrders            LabOrder[]
   labSamples           LabSample[]
   labResults           LabResult[]
   labReports           LabReport[]
+
+  // 🔥 RELACIONAMENTOS FINANCEIROS (FASE 1)
+  costCenters          CostCenter[]
+  chartOfAccounts      ChartOfAccounts[]
+  financialTransactions FinancialTransaction[]
 
   @@index([deletedAt])
 }
@@ -458,6 +517,7 @@ model Role {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
+
   tenant          Tenant    @relation(fields: [tenantId], references: [id])
   users           User[]
 
@@ -466,13 +526,12 @@ model Role {
   @@index([tenantId, deletedAt])
 }
 
-// 🔥 NOVO: Catálogo Dinâmico de Cargos (CBO)
 model Occupation {
   id          String   @id @default(uuid())
   tenantId    String
   nome        String
   codigoCBO   String?
-  tipoBase    String   // MEDICO, ENFERMEIRO, ADMINISTRATIVO
+  tipoBase    String   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
@@ -503,19 +562,20 @@ model User {
   dataAdmissao       DateTime?
   mustChangePassword Boolean   @default(false)
   ultimoAcesso       DateTime?
-
-  // 🔥 Vínculo com o Cargo Dinâmico
+  
   occupationId       String?
   occupation         Occupation? @relation(fields: [occupationId], references: [id])
 
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   deletedAt          DateTime?
+
   tenant             Tenant    @relation(fields: [tenantId], references: [id])
   role               Role      @relation(fields: [roleId], references: [id])
 
   doctor            Doctor?
   nurse             Nurse?
+
   auditLogs         AuditLog[]
   recordsOpened     MedicalRecord[]            @relation("ResponsavelAbertura")
   evolutionsCreated ClinicalEvolution[]
@@ -541,6 +601,10 @@ model User {
   labSamplesCollected LabSample[] @relation("NurseLabSamples")
   labResultsReleased  LabResult[] @relation("PathologistLabResults")
   labReportsSigned    LabReport[] @relation("PathologistLabReports")
+
+  // 🔥 RELACIONAMENTOS FINANCEIROS (FASE 1)
+  transactionsCreated  FinancialTransaction[] @relation("TransactionCreator")
+  transactionsApproved FinancialTransaction[] @relation("TransactionApprover")
 
   @@unique([email, tenantId])
   @@unique([cpfHash, tenantId])
@@ -590,13 +654,13 @@ model Doctor {
   assinaturaDigitalPath String?
   status                EntityStatus      @default(ATIVO)
 
-  // 🔥 Vínculo com o Cargo Dinâmico
   occupationId          String?
   occupation            Occupation?       @relation(fields: [occupationId], references: [id])
 
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   deletedAt             DateTime?
+
   tenant                Tenant            @relation(fields: [tenantId], references: [id])
   user                  User?             @relation(fields: [userId], references: [id])
   specialties           DoctorSpecialty[]
@@ -616,7 +680,6 @@ model Doctor {
   @@index([tenantId, crm, deletedAt])
 }
 
-// 🔥 Especialidades isoladas por Unidade
 model Specialty {
   id         String   @id @default(uuid())
   tenantId   String
@@ -659,13 +722,13 @@ model Nurse {
   podePrescrever     Boolean       @default(false)
   status             EntityStatus  @default(ATIVO)
 
-  // 🔥 Vínculo com o Cargo Dinâmico
   occupationId       String?
   occupation         Occupation?   @relation(fields: [occupationId], references: [id])
 
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   deletedAt          DateTime?
+
   tenant             Tenant        @relation(fields: [tenantId], references: [id])
   user               User?         @relation(fields: [userId], references: [id])
 
@@ -691,6 +754,7 @@ model Ward {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   deletedAt        DateTime?
+
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
   beds             Bed[]
   hospitalizations Hospitalization[]
@@ -709,6 +773,7 @@ model Bed {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   deletedAt        DateTime?
+
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
   ward             Ward              @relation(fields: [wardId], references: [id])
   hospitalizations Hospitalization[]
@@ -731,6 +796,7 @@ model Insurance {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   deletedAt        DateTime?
+
   tenant           Tenant            @relation(fields: [tenantId], references: [id])
   patients         Patient[]
   hospitalizations Hospitalization[]
@@ -772,6 +838,7 @@ model Medication {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   deletedAt              DateTime?
+
   tenant                 Tenant             @relation(fields: [tenantId], references: [id])
   prescriptionItems      PrescriptionItem[]
   billingItems           BillingItem[]
@@ -798,6 +865,7 @@ model Exam {
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
   deletedAt            DateTime?
+
   tenant               Tenant        @relation(fields: [tenantId], references: [id])
   requests             ExamRequest[]
   billingItems         BillingItem[]
@@ -834,6 +902,7 @@ model Patient {
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
   deletedAt               DateTime?
+
   tenant                  Tenant        @relation(fields: [tenantId], references: [id])
   insurance               Insurance?    @relation(fields: [convenioId], references: [id])
 
@@ -875,6 +944,7 @@ model MedicalRecord {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   deletedAt             DateTime?
+
   tenant                Tenant          @relation(fields: [tenantId], references: [id])
   patient               Patient         @relation(fields: [patientId], references: [id])
   responsavelAbertura   User?           @relation("ResponsavelAbertura", fields: [responsavelAberturaId], references: [id])
@@ -909,6 +979,7 @@ model ClinicalEvolution {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   deletedAt            DateTime?
+
   tenant               Tenant           @relation(fields: [tenantId], references: [id])
   medicalRecord        MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
   hospitalization      Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -951,6 +1022,7 @@ model Prescription {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   deletedAt             DateTime?
+
   tenant                Tenant           @relation(fields: [tenantId], references: [id])
   medicalRecord         MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
   hospitalization       Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -980,6 +1052,7 @@ model PrescriptionItem {
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
   deletedAt           DateTime?
+
   prescription        Prescription               @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
   medication          Medication                 @relation(fields: [medicationId], references: [id])
   administrations     MedicationAdministration[]
@@ -1002,6 +1075,7 @@ model MedicationAdministration {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   deletedAt            DateTime?
+
   tenant               Tenant           @relation(fields: [tenantId], references: [id])
   prescriptionItem     PrescriptionItem @relation(fields: [prescriptionItemId], references: [id])
   hospitalization      Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1031,6 +1105,7 @@ model ExamRequest {
   createdAt                 DateTime         @default(now())
   updatedAt                 DateTime         @updatedAt
   deletedAt                 DateTime?
+
   tenant                    Tenant           @relation(fields: [tenantId], references: [id])
   medicalRecord             MedicalRecord    @relation(fields: [medicalRecordId], references: [id])
   hospitalization           Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1072,6 +1147,7 @@ model Hospitalization {
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   deletedAt            DateTime?
+
   tenant               Tenant              @relation(fields: [tenantId], references: [id])
   medicalRecord        MedicalRecord       @relation(fields: [medicalRecordId], references: [id])
   patient              Patient             @relation(fields: [patientId], references: [id])
@@ -1103,7 +1179,7 @@ model Hospitalization {
 }
 
 model Appointment {
-  id                 String     @id @default(uuid())
+  id                 String    @id @default(uuid())
   tenantId           String
   patientId          String
   doctorId           String
@@ -1120,6 +1196,7 @@ model Appointment {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
   deletedAt          DateTime?
+
   tenant             Tenant     @relation(fields: [tenantId], references: [id])
   patient            Patient    @relation(fields: [patientId], references: [id])
   doctor             Doctor     @relation(fields: [doctorId], references: [id])
@@ -1157,6 +1234,7 @@ model BillingGuide {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   deletedAt         DateTime?
+
   tenant            Tenant             @relation(fields: [tenantId], references: [id])
   patient           Patient            @relation(fields: [patientId], references: [id])
   insurance         Insurance          @relation(fields: [convenioId], references: [id])
@@ -1185,6 +1263,7 @@ model BillingItem {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   deletedAt             DateTime?
+
   billingGuide          BillingGuide      @relation(fields: [billingGuideId], references: [id], onDelete: Cascade)
   exam                  Exam?             @relation(fields: [examId], references: [id])
   medication            Medication?       @relation(fields: [medicationId], references: [id])
@@ -1216,6 +1295,7 @@ model VitalSign {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   deletedAt         DateTime?
+
   tenant            Tenant           @relation(fields: [tenantId], references: [id])
   patient           Patient          @relation(fields: [patientId], references: [id])
   hospitalization   Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1247,6 +1327,7 @@ model FluidBalance {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   deletedAt       DateTime?
+
   tenant          Tenant             @relation(fields: [tenantId], references: [id])
   patient         Patient            @relation(fields: [patientId], references: [id])
   hospitalization Hospitalization?   @relation(fields: [hospitalizationId], references: [id])
@@ -1269,10 +1350,12 @@ model FluidEntry {
   tipo     FluidEntryType
 
   volumeMl     Float
+  
   descricao    String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   deletedAt    DateTime?
+
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   fluidBalance FluidBalance @relation(fields: [fluidBalanceId], references: [id], onDelete: Cascade)
   registeredBy User         @relation(fields: [registeredById], references: [id])
@@ -1289,11 +1372,12 @@ model FluidOutput {
   dataHora DateTime        @default(now())
   tipo     FluidOutputType
 
-  volumeMl     Float
+  volumeMl      Float
   descricao    String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   deletedAt    DateTime?
+
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   fluidBalance FluidBalance @relation(fields: [fluidBalanceId], references: [id], onDelete: Cascade)
   registeredBy User         @relation(fields: [registeredById], references: [id])
@@ -1326,6 +1410,7 @@ model BradenAssessment {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   patient         Patient          @relation(fields: [patientId], references: [id])
   hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1356,6 +1441,7 @@ model MorseAssessment {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
+
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   patient         Patient          @relation(fields: [patientId], references: [id])
   hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1383,6 +1469,7 @@ model GlasgowAssessment {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
+
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   patient         Patient          @relation(fields: [patientId], references: [id])
   hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1407,6 +1494,7 @@ model MedicationStock {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   deletedAt  DateTime?
+
   tenant     Tenant     @relation(fields: [tenantId], references: [id])
   medication Medication @relation(fields: [medicationId], references: [id])
 
@@ -1433,6 +1521,7 @@ model MedicationDispensation {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   deletedAt    DateTime?
+
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   prescription Prescription @relation(fields: [prescriptionId], references: [id])
   farmaceutico User?        @relation(fields: [farmaceuticoId], references: [id])
@@ -1501,6 +1590,7 @@ model DrugInteraction {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   deletedAt   DateTime?
+
   tenant      Tenant     @relation(fields: [tenantId], references: [id])
   medicationA Medication @relation("InteractionMedA", fields: [medicationAId], references: [id])
   medicationB Medication @relation("InteractionMedB", fields: [medicationBId], references: [id])
@@ -1550,6 +1640,7 @@ model SurgicalResource {
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   deletedAt DateTime?
+
   tenant    Tenant             @relation(fields: [tenantId], references: [id])
   schedules SurgicalSchedule[]
 
@@ -1575,9 +1666,11 @@ model SurgicalSchedule {
   status        SurgicalStatus   @default(AGENDADO)
   prioridade    SurgicalPriority @default(ELETIVA)
   observacoes   String?
+
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   deletedAt     DateTime?
+
   tenant        Tenant           @relation(fields: [tenantId], references: [id])
   patient       Patient          @relation(fields: [patientId], references: [id])
   medicalRecord MedicalRecord?   @relation(fields: [medicalRecordId], references: [id])
@@ -1682,6 +1775,7 @@ model OPMEItem {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
+
   tenant         Tenant        @relation(fields: [tenantId], references: [id])
   surgeriesUsage SurgeryOPME[]
 
@@ -1748,6 +1842,7 @@ model HospitalAccount {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   patient         Patient          @relation(fields: [patientId], references: [id])
   hospitalization Hospitalization? @relation(fields: [hospitalizationId], references: [id])
@@ -1780,6 +1875,7 @@ model HospitalAccountItem {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
   tenant  Tenant          @relation(fields: [tenantId], references: [id])
   account HospitalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
@@ -1803,6 +1899,7 @@ model SUSBilling {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
   tenant  Tenant          @relation(fields: [tenantId], references: [id])
   account HospitalAccount @relation(fields: [accountId], references: [id])
 
@@ -1824,6 +1921,7 @@ model BillingDenial {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
   tenant  Tenant          @relation(fields: [tenantId], references: [id])
   account HospitalAccount @relation(fields: [accountId], references: [id])
 
@@ -1844,6 +1942,7 @@ model DRGGroup {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
   tenant   Tenant            @relation(fields: [tenantId], references: [id])
   accounts HospitalAccount[]
 
@@ -1869,6 +1968,7 @@ model LabExam {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
   deletedAt            DateTime?
+
   tenant               Tenant          @relation(fields: [tenantId], references: [id])
   results              LabResult[]
 
@@ -1889,6 +1989,7 @@ model LabOrder {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   deletedAt         DateTime?
+
   tenant         Tenant         @relation(fields: [tenantId], references: [id])
   patient           Patient        @relation(fields: [patientId], references: [id])
   requester         User           @relation("DoctorLabOrders", fields: [requestedBy], references: [id])
@@ -1896,6 +1997,7 @@ model LabOrder {
   samples           LabSample[]
   results           LabResult[]
   report            LabReport?
+
   @@index([tenantId, status])
   @@index([tenantId, patientId])
 }
@@ -1912,6 +2014,7 @@ model LabSample {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   deletedAt    DateTime?
+
   tenant       Tenant          @relation(fields: [tenantId], references: [id])
   order        LabOrder        @relation(fields: [labOrderId], references: [id])
   collector    User?           @relation("NurseLabSamples", fields: [collectedBy], references: [id])
@@ -1938,7 +2041,7 @@ model LabResult {
   tenant       Tenant    @relation(fields: [tenantId], references: [id])
   order        LabOrder  @relation(fields: [labOrderId], references: [id])
   exam         LabExam   @relation(fields: [examId], references: [id])
-  pathologist  User?     @relation("PathologistLabResults", fields: [releasedBy], references: [id])
+  pathologist  User?           @relation("PathologistLabResults", fields: [releasedBy], references: [id])
 
   @@index([tenantId, labOrderId])
 }
@@ -1959,4 +2062,100 @@ model LabReport {
   pathologist      User?     @relation("PathologistLabReports", fields: [signedBy], references: [id])
 
   @@index([tenantId, signedAt])
+}
+
+// ==========================================
+// 💰 FASE 1: MÓDULO FINANCEIRO ENTERPRISE
+// ==========================================
+
+model CostCenter {
+  id       String @id @default(uuid())
+  tenantId String
+
+  codigo      String
+  nome        String
+  tipo        CostCenterType
+  codigoPai   String?
+  ativo       Boolean   @default(true)
+  descricao   String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id])
+  transactions FinancialTransaction[]
+
+  @@unique([tenantId, codigo])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, tipo, deletedAt])
+}
+
+model ChartOfAccounts {
+  id       String @id @default(uuid())
+  tenantId String
+
+  codigo            String
+  nome              String
+  tipo              AccountingType
+  natureza          AccountNature
+  codigoPai         String?
+  aceitaLancamento  Boolean  @default(true)
+  ativo             Boolean  @default(true)
+  descricao         String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id])
+  transactions FinancialTransaction[]
+
+  @@unique([tenantId, codigo])
+  @@index([tenantId, tipo, deletedAt])
+  @@index([tenantId, deletedAt])
+}
+
+model FinancialTransaction {
+  id       String @id @default(uuid())
+  tenantId String
+
+  tipo            TransactionType
+  natureza        TransactionNature
+  chartAccountId  String
+  costCenterId    String?
+
+  descricao       String
+  valor           Float
+  dataCompetencia DateTime
+  dataVencimento  DateTime?
+  dataPagamento   DateTime?
+  status          TransactionStatus @default(PENDENTE)
+
+  origemTipo      String?
+  origemId        String?
+
+  numeroDocumento String?
+  formaPagamento  PaymentMethod?
+  observacoes     String?
+
+  criadoPorId   String
+  aprovadoPorId String?
+  aprovadoEm    DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  chartAccount ChartOfAccounts @relation(fields: [chartAccountId], references: [id])
+  costCenter   CostCenter?     @relation(fields: [costCenterId], references: [id])
+  criadoPor    User            @relation("TransactionCreator", fields: [criadoPorId], references: [id])
+  aprovadoPor  User?           @relation("TransactionApprover", fields: [aprovadoPorId], references: [id])
+
+  @@index([tenantId, tipo, status, deletedAt])
+  @@index([tenantId, dataCompetencia, deletedAt])
+  @@index([tenantId, chartAccountId, deletedAt])
+  @@index([tenantId, costCenterId, deletedAt])
+  @@index([tenantId, origemTipo, origemId])
 }

@@ -13,7 +13,8 @@ import {
   WalletOutlined,
   HeartOutlined,
   ExperimentOutlined,
-  ScissorOutlined
+  ScissorOutlined,
+  BankOutlined // 🔥 INJETADO: Ícone para o Módulo Financeiro
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -110,6 +111,17 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
       icon: <AuditOutlined />,
       label: 'Relatórios',
     },
+    // 🔥 INJEÇÃO CIRÚRGICA: Grupo do Módulo Financeiro
+    {
+      key: 'financial-group',
+      icon: <BankOutlined />,
+      label: 'Financeiro',
+      children: [
+        { key: '/financial/cost-centers', label: 'Centros de Custo' },
+        { key: '/financial/chart', label: 'Plano de Contas' },
+        { key: '/financial/transactions', label: 'Lançamentos' },
+      ]
+    },
     {
       key: 'admin-group',
       icon: <SettingOutlined />,
@@ -153,7 +165,8 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
           selectedKeys={[location.pathname]}
           items={menuItems}
           onClick={({ key }) => {
-            const groupKeys = ['admin-group', 'billing-group', 'attendance-group', 'cadastro-group'];
+            // 🔥 INJETADO: "financial-group" adicionado na lista de chaves de grupo que não devem navegar
+            const groupKeys = ['admin-group', 'billing-group', 'attendance-group', 'cadastro-group', 'financial-group'];
             if (!groupKeys.includes(key)) {
               navigate(key);
             }

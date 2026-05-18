@@ -50,7 +50,7 @@ export class ExamRequestsUseCases {
     const request = new ExamRequest(
       crypto.randomUUID(), tenantId, data.medicalRecordId, data.hospitalizationId || null,
       doctorId, record.patientId, data.examId, data.cid10Id || null, new Date(),
-      data.urgencia, 'SOLICITADO', null, null, data.observacoes || null,
+      data.urgencia ?? 'ROTINA', 'SOLICITADO', null, null, data.observacoes || null,
       codigoAutorizacao, new Date(), new Date(), null
     );
 
@@ -88,8 +88,10 @@ export class ExamRequestsUseCases {
     const request = await this.examRequestRepo.findById(requestId, tenantId);
     if (!request) throw new NotFoundException('Solicitação de exame não encontrada.');
     if (request.status === 'CONCLUIDO') throw new BadRequestException('Não é possível cancelar um exame já laudado.');
-    // Atualização de status e log
-    await this.examRequestRepo.updateResult(requestId, tenantId, request.resultado, 'CANCELADO', request.dataHoraResultado);
+    
+    // 🔥 CORREÇÃO TYPE SAFETY: Garantido que dataHoraResultado nunca será nulo neste método
+    await this.examRequestRepo.updateResult(requestId, tenantId, request.resultado ?? '', 'CANCELADO', request.dataHoraResultado ?? new Date());
+    
     return { id: requestId, status: 'CANCELADO' };
   }
 

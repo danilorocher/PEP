@@ -9,7 +9,6 @@ import { PrismaModule } from './shared/infrastructure/database/prisma.module';
 import { TenantMiddleware } from './common/middlewares/tenant.middleware';
 import { TenantThrottlerGuard } from './common/guards/tenant-throttler.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
-// 🔥 NOVA IMPORTAÇÃO: Interceptor de Request ID para rastreabilidade
 import { RequestIdInterceptor } from './shared/interceptors/request-id.interceptor';
 
 import { AuthModule } from './modules/auth/auth.module';
@@ -34,17 +33,17 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 
 import { AssistanceModule } from './modules/assistance/assistance.module';
 import { PharmacyModule } from './modules/pharmacy/pharmacy.module';
-// 🔥 IMPORTAÇÃO DO MÓDULO CIRÚRGICO
 import { SurgicalCenterModule } from './modules/surgical-center/surgical-center.module';
-// 🔥 NOVA IMPORTAÇÃO: MÓDULO DE FATURAMENTO AVANÇADO (CONTA DO PACIENTE)
 import { HospitalBillingModule } from './modules/hospital-billing/hospital-billing.module';
 
-// 🔥 NOVO: IMPORTAÇÕES DOS MÓDULOS DE CONFIGURAÇÃO DINÂMICA
 import { OccupationsModule } from './modules/occupations/occupations.module';
 import { SpecialtiesModule } from './modules/specialties/specialties.module';
 
-import { CacheModule } from './shared/infrastructure/cache/cache.module'; // 🔥 IMPORTAÇÃO DO CACHE
-import { ScheduleModule } from '@nestjs/schedule'; //
+// 🔥 NOVO: IMPORTAÇÃO DO MÓDULO FINANCEIRO (FASE 1)
+import { FinancialModule } from './modules/financial/financial.module';
+
+import { CacheModule } from './shared/infrastructure/cache/cache.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 
 @Module({
@@ -69,14 +68,13 @@ import { ScheduleModule } from '@nestjs/schedule'; //
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const rawHost = configService.get<string>('REDIS_HOST');
-        // Se o host vier como "redis" (comum em Docker), forçamos localhost para rodar nativo no Windows
-        const host = rawHost === 'redis' ? 'localhost' : rawHost;
+        const host = configService.get<string>('REDIS_HOST');
+        const port = configService.get<number>('REDIS_PORT');
         
         return {
           connection: {
-            host: host,
-            port: configService.get<number>('REDIS_PORT'),
+            host,
+            port,
           },
         };
       },
@@ -84,9 +82,7 @@ import { ScheduleModule } from '@nestjs/schedule'; //
     }),
 
     PrismaModule,
-    CacheModule, // 🔥 ADICIONADO AQUI: Agora todo o sistema reconhece o RedisService!
-
-    // 🔥 ATUALIZAÇÃO FASE 3: Inicialização do motor de Cron Jobs do NestJS
+    CacheModule,
     ScheduleModule.forRoot(),
 
     AuthModule,
@@ -109,24 +105,21 @@ import { ScheduleModule } from '@nestjs/schedule'; //
     AuditModule,
     TenantsModule,
 
-    // Módulos Assistenciais
     AssistanceModule,
     PharmacyModule,
-    // 🔥 MÓDULO DE CENTRO CIRÚRGICO REGISTRADO AQUI NA LISTA
     SurgicalCenterModule,
-    // 🔥 NOVO MÓDULO DE FATURAMENTO AVANÇADO REGISTRADO AQUI
     HospitalBillingModule,
-
-    // 🔥 REGISTRO DOS NOVOS MÓDULOS PARA CARGOS E ESPECIALIDADES
     OccupationsModule,
     SpecialtiesModule,
+    
+    // 🔥 REGISTRO DO MÓDULO FINANCEIRO
+    FinancialModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
       useClass: TenantThrottlerGuard,
     },
-    // 🔥 NOVO INTERCEPTOR GLOBAL: Rastreabilidade (Request ID)
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestIdInterceptor,
