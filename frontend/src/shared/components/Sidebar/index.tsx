@@ -1,4 +1,5 @@
-import { Layout, Menu } from 'antd';
+import React from 'react';
+import { Layout, Menu, Typography } from 'antd';
 import { 
   DashboardOutlined, 
   TeamOutlined, 
@@ -14,35 +15,41 @@ import {
   HeartOutlined,
   ExperimentOutlined,
   ScissorOutlined,
-  BankOutlined // 🔥 INJETADO: Ícone para o Módulo Financeiro
+  BankOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const { Sider } = Layout;
+const { Title } = Typography;
 
-export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
+interface SidebarProps {
+  collapsed: boolean;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 🔥 Matriz de Itens do Menu - Estruturada para Alta Densidade Enterprise
   const menuItems = [
     {
       key: '/dashboard',
-      icon: <DashboardOutlined />,
+      icon: <DashboardOutlined style={{ fontSize: '15px' }} />,
       label: 'Dashboard',
     },
     {
       key: '/patients',
-      icon: <TeamOutlined />,
+      icon: <TeamOutlined style={{ fontSize: '15px' }} />,
       label: 'Pacientes',
     },
     {
       key: '/scheduling',
-      icon: <CalendarOutlined />,
+      icon: <CalendarOutlined style={{ fontSize: '15px' }} />,
       label: 'Agendamento',
     },
     {
       key: 'attendance-group',
-      icon: <IdcardOutlined />,
+      icon: <IdcardOutlined style={{ fontSize: '15px' }} />,
       label: 'Atendimento Clínico',
       children: [
         { key: '/attendance', label: 'Painel da Recepção' },
@@ -52,52 +59,52 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
     },
     {
       key: '/medical-records',
-      icon: <SolutionOutlined />,
+      icon: <SolutionOutlined style={{ fontSize: '15px' }} />,
       label: 'Buscar Prontuário', 
     },
     {
       key: '/hospitalizations',
-      icon: <MedicineBoxOutlined />,
+      icon: <MedicineBoxOutlined style={{ fontSize: '15px' }} />,
       label: 'Internações',
     },
     {
       key: '/assistance',
-      icon: <HeartOutlined />,
+      icon: <HeartOutlined style={{ fontSize: '15px' }} />,
       label: 'Assistência ao Paciente',
     },
     {
       key: '/medication',
-      icon: <MedicineBoxOutlined />,
+      icon: <MedicineBoxOutlined style={{ fontSize: '15px' }} />,
       label: 'Medicações',
     },
     {
       key: '/pharmacy',
-      icon: <MedicineBoxOutlined />,
+      icon: <MedicineBoxOutlined style={{ fontSize: '15px' }} />,
       label: 'Farmácia',
     },
     {
       key: '/surgical-center',
-      icon: <ScissorOutlined />,
+      icon: <ScissorOutlined style={{ fontSize: '15px' }} />,
       label: 'Bloco Cirúrgico',
     },
     {
       key: '/exams',
-      icon: <FileSearchOutlined />,
+      icon: <FileSearchOutlined style={{ fontSize: '15px' }} />,
       label: 'Central de Exames',
     },
     {
       key: '/lab', 
-      icon: <ExperimentOutlined />,
+      icon: <ExperimentOutlined style={{ fontSize: '15px' }} />,
       label: 'Laboratório (LIS)',
     },
     {
       key: 'billing-group',
-      icon: <ContainerOutlined />,
+      icon: <ContainerOutlined style={{ fontSize: '15px' }} />,
       label: 'Faturamento',
       children: [
         { 
           key: '/hospital-billing', 
-          icon: <WalletOutlined />, 
+          icon: <WalletOutlined style={{ fontSize: '13px' }} />, 
           label: 'Conta & Faturação' 
         },
         { 
@@ -108,13 +115,12 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
     },
     {
       key: '/reports',
-      icon: <AuditOutlined />,
+      icon: <AuditOutlined style={{ fontSize: '15px' }} />,
       label: 'Relatórios',
     },
-    // 🔥 INJEÇÃO CIRÚRGICA: Grupo do Módulo Financeiro
     {
       key: 'financial-group',
-      icon: <BankOutlined />,
+      icon: <BankOutlined style={{ fontSize: '15px' }} />,
       label: 'Financeiro',
       children: [
         { key: '/financial/cost-centers', label: 'Centros de Custo' },
@@ -124,7 +130,7 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
     },
     {
       key: 'admin-group',
-      icon: <SettingOutlined />,
+      icon: <SettingOutlined style={{ fontSize: '15px' }} />,
       label: 'Sistema',
       children: [
         {
@@ -145,27 +151,75 @@ export const Sidebar = ({ collapsed }: { collapsed: boolean }) => {
   ];
 
   return (
-    <Sider trigger={null} collapsible collapsed={collapsed} theme="light" style={{
-      borderRight: '1px solid #f0f0f0',
-      height: '100vh',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      bottom: 0,
-    }}>
-      {/* CABEÇALHO DO MENU (Fixo) */}
-      <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#001529' }}>
-        <h2 style={{ color: 'white', margin: 0 }}>{collapsed ? 'P+' : 'PEP+'}</h2>
+    <Sider
+      trigger={null}
+      collapsible
+      collapsed={collapsed}
+      width={256}
+      collapsedWidth={80}
+      style={{
+        height: '100vh',
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        zIndex: 20,
+        background: '#020617', // Slate 950 (Fundo Premium Clínico)
+        borderRight: '1px solid #0F172A', // Divisória sutil Slate 900
+        boxShadow: '4px 0 24px 0 rgb(0 0 0 / 0.15)'
+      }}
+    >
+      {/* BRANDING LOGO (Fixo no Topo da Sidebar) */}
+      <div 
+        style={{ 
+          height: 64, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          background: '#020617',
+          borderBottom: '1px solid #0F172A',
+          padding: '0 16px',
+          transition: 'all 0.2s'
+        }}
+      >
+        <Title 
+          level={4} 
+          style={{ 
+            color: '#F8FAFC', 
+            margin: 0, 
+            fontWeight: 800, 
+            letterSpacing: collapsed ? '0.5px' : '1.5px',
+            fontSize: collapsed ? '16px' : '18px',
+            textTransform: 'uppercase'
+          }}
+        >
+          {collapsed ? (
+            <span style={{ color: '#2DD4BF' }}>P+</span>
+          ) : (
+            <>
+              PEP<span style={{ color: '#2DD4BF', fontWeight: 400 }}>+</span>
+            </>
+          )}
+        </Title>
       </div>
 
-      {/* 🔥 CORREÇÃO DO SCROLL: Envolvemos o Menu numa div que calcula a altura da tela menos o cabeçalho e ativa a rolagem vertical */}
-      <div style={{ height: 'calc(100vh - 64px)', overflowY: 'auto', overflowX: 'hidden' }}>
+      {/* ÁREA DE SCROLL INDEPENDENTE DO MENU */}
+      <div 
+        style={{ 
+          height: 'calc(100vh - 64px)', 
+          overflowY: 'auto', 
+          overflowX: 'hidden',
+          paddingBottom: '24px'
+        }}
+      >
         <Menu
           mode="inline"
+          theme="dark"
           selectedKeys={[location.pathname]}
           items={menuItems}
+          style={{ background: 'transparent', border: 'none' }}
           onClick={({ key }) => {
-            // 🔥 INJETADO: "financial-group" adicionado na lista de chaves de grupo que não devem navegar
+            // 🔥 Evita navegação incorreta ao expandir nós estruturais vazios
             const groupKeys = ['admin-group', 'billing-group', 'attendance-group', 'cadastro-group', 'financial-group'];
             if (!groupKeys.includes(key)) {
               navigate(key);

@@ -1,72 +1,48 @@
-import { Tag } from 'antd';
+import React from 'react';
 
 interface StatusTagProps {
   status: string;
 }
 
-export const StatusTag = ({ status }: StatusTagProps) => {
-  const getColor = (s: string) => {
-    const normalizedStatus = s?.toUpperCase() || '';
+export const StatusTag: React.FC<StatusTagProps> = ({ status }) => {
+  const getStyles = (status: string) => {
+    const s = status?.toUpperCase() || '';
     
-    switch (normalizedStatus) {
-      case 'ATIVO':
-      case 'MINISTRADO':
-      case 'AUTORIZADA':
-      case 'PAGA':
-      case 'REALIZADO':
-      case 'LIVRE':
-      case 'ALTA_CURADO':
-      case 'ALTA_MELHORADO':
-        return 'green';
-        
-      case 'INATIVO':
-      case 'CANCELADO':
-      case 'CANCELADA':
-      case 'NEGADA':
-      case 'OCUPADO':
-      case 'SUSPENSA':
-      case 'OBITO':
-      case 'FALTOU':
-        return 'red';
-        
-      case 'AGENDADO':
-      case 'ENVIADA':
-      case 'RESERVADO':
-      case 'ABERTO':
-      case 'SOLICITADO':
-      case 'ATIVA':
-        return 'blue';
-        
-      case 'GLOSADA':
-      case 'MANUTENCAO':
-      case 'RECUSADO_PACIENTE':
-      case 'ATRASADO':
-      case 'TRANSFERENCIA':
-      case 'ALTA_PEDIDO':
-        return 'orange';
-        
-      case 'EM_ATENDIMENTO':
-      case 'COLETADO':
-      case 'EM_ANALISE':
-        return 'cyan';
-        
-      case 'FECHADO':
-      case 'ARQUIVADO':
-      case 'CONCLUIDO':
-      case 'CONCLUIDA':
-      case 'ALTA':
-      case 'TRANSFERIDO':
-        return 'purple';
-        
-      default:
-        return 'default';
+    // SUCESSO (Verde Esmeralda Clínico)
+    if (['PAGO', 'ATIVO', 'CONCLUIDO', 'APROVADO', 'ALTA', 'LIBERADO'].includes(s)) {
+      return { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' }; 
     }
+    // ALERTA (Âmbar/Laranja Corporativo)
+    if (['PENDENTE', 'AGUARDANDO', 'EM_ANDAMENTO', 'INTERNADO', 'PARCIAL'].includes(s)) {
+      return { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' }; 
+    }
+    // PERIGO/ERRO (Vermelho Carmesim)
+    if (['CANCELADO', 'INATIVO', 'FALHA', 'ERRO', 'SUSPENSO', 'OBITO'].includes(s)) {
+      return { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' }; 
+    }
+    // NEUTRO (Slate Grey)
+    return { bg: '#F1F5F9', text: '#475569', border: '#E2E8F0' }; 
   };
 
-  const formatText = (text: string) => {
-    if (!text) return 'DESCONHECIDO';
-    return text.replace(/_/g, ' ');
-  };
+  const { bg, text, border } = getStyles(status);
 
-  return <Tag color={getColor(status)}>{formatText(status)}</Tag>;
+  return (
+    <span 
+      style={{
+        backgroundColor: bg,
+        color: text,
+        border: `1px solid ${border}`,
+        padding: '2px 8px',
+        borderRadius: '4px',
+        fontSize: '11px',
+        fontWeight: 600,
+        letterSpacing: '0.5px',
+        textTransform: 'uppercase',
+        display: 'inline-block',
+        lineHeight: '16px'
+      }}
+    >
+      {status}
+    </span>
+  );
 };

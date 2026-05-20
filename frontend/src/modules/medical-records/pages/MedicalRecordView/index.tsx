@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Typography, Spin, message, Space, Tag, Button, Tabs, Divider } from 'antd';
+import { Card, Typography, Spin, message, Space, Tag, Button, Tabs, Divider, Tooltip } from 'antd';
 import { 
   ArrowLeftOutlined, 
   PlusOutlined, 
@@ -7,18 +7,17 @@ import {
   MedicineBoxOutlined, 
   FileSearchOutlined,
   SafetyOutlined,
-  LineChartOutlined
+  LineChartOutlined,
+  LockOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../../../shared/services/api';
+import { api } from '../../../../shared/services/api';
 import { Can } from '../../../../shared/hooks/usePermission';
 import { EvolutionTimeline } from '../../components/EvolutionTimeline';
 import { EvolutionFormModal } from '../../components/EvolutionFormModal';
 import { EvolutionHistoryModal } from '../../components/EvolutionHistoryModal';
 import { PrescriptionList } from '../../../prescriptions/components/PrescriptionList';
-// 🔥 NOVO IMPORT AQUI
 import { PatientExamList } from '../../../exams/components/PatientExamList';
-
 import { VitalSigns } from '../../../assistance/components/VitalSigns';
 import { FluidBalance } from '../../../assistance/components/FluidBalance';
 import { ClinicalDashboard } from '../../../assistance/components/ClinicalDashboard';
@@ -57,15 +56,12 @@ export const MedicalRecordViewPage = () => {
         setVitalHistory(vRes.data?.data || []);
       }
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        message.error('Prontuário ativo não encontrado para este paciente.');
-      } else {
-        message.error('Erro ao carregar prontuário');
-      }
+      message.error('Erro ao carregar os dados do prontuário.');
+      navigate('/patients');
     } finally {
       setLoading(false);
     }
-  }, [patientId]);
+  }, [patientId, navigate]);
 
   useEffect(() => {
     fetchRecordData();
@@ -73,6 +69,9 @@ export const MedicalRecordViewPage = () => {
 
   if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}><Spin size="large" /></div>;
   if (!patient || !record) return <div style={{ padding: 24 }}><Button onClick={() => navigate(-1)} icon={<ArrowLeftOutlined />}>Voltar</Button><Divider /><h2>Prontuário indisponível</h2></div>;
+
+  // 🔥 REGRA CLÍNICA: Verifica se o prontuário está apto para receber novas prescrições/evoluções
+  const isRecordActive = ['ABERTO', 'EM_ANDAMENTO'].includes(record.status);
 
   const tabs = [
     {
@@ -82,9 +81,18 @@ export const MedicalRecordViewPage = () => {
         <div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
             <Can module="prontuario" action="criar">
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormModal({ visible: true, data: null })}>
-                Nova Evolução
-              </Button>
+              {/* 🔥 BOTÃO BLINDADO: Só permite clicar se o paciente estiver no hospital (Ativo) */}
+              <Tooltip title={!isRecordActive ? 'Modo Leitura: Inicie um atendimento na recepção para poder evoluir o paciente.' : ''}>
+                <Button 
+                  type="primary" 
+                  icon={!isRecordActive ? <LockOutlined /> : <PlusOutlined />} 
+                  onClick={() => setFormModal({ visible: true, data: null })}
+                  disabled={!isRecordActive}
+                  style={{ background: isRecordActive ? '#0F766E' : undefined }}
+                >
+                  Nova Evolução
+                </Button>
+              </Tooltip>
             </Can>
           </div>
           <EvolutionTimeline 
@@ -103,7 +111,6 @@ export const MedicalRecordViewPage = () => {
           <Card title={<Space><LineChartOutlined /> Monitoramento Clínico</Space>} size="small">
              <ClinicalDashboard data={vitalHistory} />
           </Card>
-          
           <VitalSigns patientId={patientId!} hospitalizationId={record?.hospitalizationId} />
           <RiskAssessments patientId={patientId!} hospitalizationId={record?.hospitalizationId} />
           <FluidBalance patientId={patientId!} hospitalizationId={record?.hospitalizationId} />
@@ -118,22 +125,27 @@ export const MedicalRecordViewPage = () => {
     {
       key: 'exams',
       label: <span><FileSearchOutlined /> Exames</span>,
-      // 🔥 AQUI SUBSTITUÍMOS O PLACEHOLDER PELO COMPONENTE REAL
       children: <PatientExamList patientId={patientId!} recordId={record.id} hospitalizationId={record?.hospitalizationId} />
     }
   ];
 
   return (
     <div>
-      <Space style={{ marginBottom: 24 }}>
+      <Space style={{ marginBottom: 24, display: 'flex', alignItems: 'center' }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/patients')} />
-        <Title level={2} style={{ margin: 0 }}>Prontuário Eletrônico</Title>
-        <Tag color={record.status === 'ABERTO' ? 'green' : 'red'}>{record.status}</Tag>
+        <Title level={3} style={{ margin: 0, color: '#1E293B' }}>Prontuário Eletrônico</Title>
+        {/* 🔥 TAG DE STATUS INTELIGENTE */}
+        <Tag 
+          color={isRecordActive ? 'green' : 'default'} 
+          style={{ fontSize: '13px', padding: '4px 12px', fontWeight: 600, border: '1px solid', letterSpacing: '0.5px' }}
+        >
+          {isRecordActive ? 'ATIVO (EM ATENDIMENTO)' : 'MODO LEITURA (FECHADO)'}
+        </Tag>
       </Space>
 
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: 24, border: '1px solid #E2E8F0', borderRadius: '6px' }}>
         <Space direction="vertical" size="small">
-          <Text strong style={{ fontSize: 18 }}>{patient.nomeCompleto}</Text>
+          <Text strong style={{ fontSize: 18, color: '#0F766E' }}>{patient.nomeCompleto}</Text>
           <Space split={<Divider type="vertical" />}>
             <Text type="secondary">CPF: {patient.cpf}</Text>
             <Text type="secondary">Registro PEP: {record.numero}</Text>
@@ -146,7 +158,7 @@ export const MedicalRecordViewPage = () => {
         </Space>
       </Card>
 
-      <Card bodyStyle={{ padding: '0 24px 24px 24px' }}>
+      <Card bodyStyle={{ padding: '0 24px 24px 24px' }} style={{ border: '1px solid #E2E8F0', borderRadius: '6px' }}>
         <Tabs defaultActiveKey="evolutions" items={tabs} />
       </Card>
 

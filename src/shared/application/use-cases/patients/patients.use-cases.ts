@@ -129,10 +129,26 @@ export class PatientsUseCases {
     await this.patientRepo.softDelete(id, tenantId);
   }
 
-  async getMedicalRecord(id: string, tenantId: string) {
+ async getMedicalRecord(id: string, tenantId: string) {
     await this.findOne(id, tenantId);
-    const record = await this.patientRepo.getActiveMedicalRecord(id, tenantId);
-    if (!record) throw new NotFoundException('Prontuário ativo não encontrado.');
+    
+    // 1. Tenta buscar o Prontuário Ativo (Paciente está internado ou em atendimento de recepção hoje)
+    let record = await this.patientRepo.getActiveMedicalRecord(id, tenantId);
+    
+    // 2. BYPASS DE MERCADO: Se não estiver ativo, não expulsamos o médico. 
+    // Buscamos o histórico geral do paciente para ativar o "Modo Leitura".
+    if (!record) {
+      const patientData = await this.patientRepo.getCompletePatientData(id, tenantId);
+      if (patientData && patientData.medicalRecords && patientData.medicalRecords.length > 0) {
+        // Pega o prontuário estrutural (o primeiro/principal)
+        record = patientData.medicalRecords[0]; 
+        // Forçamos uma flag visual para o Frontend saber que está no modo segurança
+        record.status = 'FECHADO'; 
+      }
+    }
+
+    if (!record) throw new NotFoundException('Nenhum prontuário registrado para este paciente.');
+    
     return record;
   }
 

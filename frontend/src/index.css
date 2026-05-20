@@ -1,18 +1,85 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   FUNDAÇÃO ENTERPRISE PEP+ (CLINICAL UI)
+   ========================================================================== */
+
 :root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --bg-app: #F8FAFC;
+  --sidebar-bg: #020617;
 }
 
 body {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
-  background-color: #f5f5f5;
+  background-color: var(--bg-app);
+  /* Otimização ótica da tipografia para monitores clínicos de alta resolução */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-#root {
-  min-height: 100vh;
+/* ==========================================================================
+   SCROLLBAR CORPORATIVO (Substitui as barras cinzentas antiquadas do Windows)
+   ========================================================================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.group-row-bg {
-  background-color: #fafafa !important;
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Scrollbar escuro para a Sidebar */
+.ant-layout-sider ::-webkit-scrollbar-thumb {
+  background: #1E293B;
+}
+.ant-layout-sider ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* ==========================================================================
+   CORREÇÕES DE COMPORTAMENTO DO ANT DESIGN
+   ========================================================================== */
+/* Remove as bordas feias focadas nativas dos browsers antigos */
+*:focus {
+  outline: none !important;
+}
+
+/* Suavidade nas transições dos Modais */
+.ant-modal-content {
+  border: 1px solid #E2E8F0;
+  overflow: hidden;
+}
+
+/* Cabeçalhos de tabelas mais limpos (Sem divisórias verticais pesadas) */
+.ant-table-thead > tr > th {
+  border-bottom: 2px solid #E2E8F0 !important;
+}
+.ant-table-thead > tr > th::before {
+  display: none !important; /* Remove o separador vertical do Antd */
+}
+
+/* ==========================================================================
+   DENSIDADE DE DADOS E TABELAS PREMIUM
+   ========================================================================== */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  letter-spacing: -0.5px;
+}
+
+/* Efeito de hover de linha muito mais subtil e rápido */
+.ant-table-tbody > tr > td {
+  transition: background 0.1s ease !important;
 }
