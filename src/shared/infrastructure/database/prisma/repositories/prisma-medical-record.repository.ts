@@ -57,40 +57,38 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
   }
 
   async createEvolution(evolution: ClinicalEvolution): Promise<ClinicalEvolution> {
-    // 🔥 1. BYPASS VIP (GOD MODE)
-    let safeProfissionalId = evolution.profissionalId;
+    // 🔥 CORREÇÃO CIRÚRGICA: Mantemos o evolution.profissionalId original (que é o User.id do Token)
+    // para não quebrar a chave estrangeira do banco de dados relacional.
+    let safeProfissionalId = evolution.profissionalId; 
     let safeTipoProfissional = evolution.tipoProfissional;
 
     const doctor = await this.prisma.doctor.findFirst({ where: { userId: safeProfissionalId, deletedAt: null } });
     const nurse = await this.prisma.nurse.findFirst({ where: { userId: safeProfissionalId, deletedAt: null } });
 
     if (doctor) {
-      safeProfissionalId = doctor.id;
       safeTipoProfissional = 'MEDICO';
     } else if (nurse) {
-      safeProfissionalId = nurse.id;
       safeTipoProfissional = 'ENFERMEIRO';
     } else {
-      // Se for o MASTER_ADMIN testando, usa o primeiro médico do hospital
+      // Se for o MASTER_ADMIN testando, tenta encontrar o vínculo do primeiro médico do hospital
       const fallbackDoctor = await this.prisma.doctor.findFirst({ where: { tenantId: evolution.tenantId, deletedAt: null } });
       const fallbackNurse = await this.prisma.nurse.findFirst({ where: { tenantId: evolution.tenantId, deletedAt: null } });
       
-      if (fallbackDoctor) {
-        safeProfissionalId = fallbackDoctor.id;
+      if (fallbackDoctor && fallbackDoctor.userId) {
+        safeProfissionalId = fallbackDoctor.userId;
         safeTipoProfissional = 'MEDICO';
-      } else if (fallbackNurse) {
-        safeProfissionalId = fallbackNurse.id;
+      } else if (fallbackNurse && fallbackNurse.userId) {
+        safeProfissionalId = fallbackNurse.userId;
         safeTipoProfissional = 'ENFERMEIRO';
       } else {
-         // 🔥 DEFESA 1: Se o banco estiver totalmente vazio, avisa o Administrador!
          throw new ForbiddenException('Para registrar evoluções ou prescrições, é obrigatório ter pelo menos 1 Médico cadastrado no menu "Profissionais" do sistema.');
       }
     }
 
-    // 🔥 2. DEFESA DO CID-10 FALSO (A causa do seu erro)
+    // Defesa de segurança contra mocks antigos
     let safeCid = evolution.cid10Id || null;
     if (safeCid === 'CID-MOCK' || safeCid === 'Z00.0') {
-      safeCid = null; // Descartamos a mentira do frontend para o banco de dados não bloquear
+      safeCid = null; 
     }
 
     const created = await this.prisma.$transaction(async (tx) => {
@@ -99,13 +97,13 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
           id: evolution.id,
           tenantId: evolution.tenantId,
           medicalRecordId: evolution.medicalRecordId,
-          profissionalId: safeProfissionalId,
+          profissionalId: safeProfissionalId, // Mapeado de forma correta ao User.id legítimo
           tipoProfissional: safeTipoProfissional as any,
           descricao: evolution.descricao,
           versao: evolution.versao,
           assinadoDigitalmente: evolution.assinadoDigitalmente,
           hospitalizationId: evolution.hospitalizationId || null,
-          cid10Id: safeCid, // 🔥 Injetamos a variável protegida aqui!
+          cid10Id: safeCid, 
           assinaturaHash: evolution.assinaturaHash,
           dataHora: evolution.dataHora || new Date()
         }
@@ -193,9 +191,6 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
     });
   }
 
-  /**
-   * Implementação de Soft Delete Mandatório para Prontuários (LGPD + CFM)
-   */
   async softDelete(id: string, tenantId: string): Promise<void> {
     await this.prisma.medicalRecord.update({
       where: { id, tenantId },
@@ -203,9 +198,6 @@ export class PrismaMedicalRecordRepository implements IMedicalRecordRepository {
     });
   }
 
-  /**
-   * Bloqueio de Hard Delete (Segurança de Dados)
-   */
   async permanentDelete(id: string, tenantId: string): Promise<void> {
     throw new ForbiddenException('Exclusão permanente de prontuários é proibida por norma legal (CFM/LGPD).');
   }

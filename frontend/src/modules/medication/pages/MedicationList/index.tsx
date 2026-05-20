@@ -19,7 +19,7 @@ export const MedicationListPage = () => {
   const fetchAdministrations = useCallback(async (page = 1, pageSize = 20, status = 'NAO_MINISTRADO', date = dayjs()) => {
     setLoading(true);
     try {
-      const response = await api.get('/medication-administrations', {
+      const response = await api.get('/medication-administrations/pending', {
         params: { 
           page, 
           limit: pageSize, 
@@ -28,11 +28,10 @@ export const MedicationListPage = () => {
           dataFinal: date.endOf('day').toISOString()
         },
       }).catch(err => {
-        console.error('Aviso: Rota de medicaÃ§Ãµes falhou ou estÃ¡ vazia', err.message);
-        return { data: { data: [], total: 0 } }; // Fallback seguro para nÃ£o quebrar a tela
+        console.error('Aviso: Rota de medicações falhou ou está vazia', err.message);
+        return { data: { data: [], total: 0 } }; 
       });
 
-      // Lida com diferentes formatos de resposta (objeto paginado ou array direto)
       const listData = response.data?.data || response.data || [];
       const totalCount = response.data?.total || listData.length || 0;
 
@@ -40,7 +39,7 @@ export const MedicationListPage = () => {
       setPagination({ current: page, pageSize, total: totalCount });
     } catch (error) {
       console.error(error);
-      message.error('Erro ao carregar lista de medicaÃ§Ãµes');
+      message.error('Erro ao carregar a lista de medicações');
     } finally {
       setLoading(false);
     }
@@ -56,7 +55,7 @@ export const MedicationListPage = () => {
 
   const columns = [
     {
-      title: 'HorÃ¡rio',
+      title: 'Horário',
       dataIndex: 'dataHoraProgamada',
       key: 'dataHoraProgamada',
       render: (val: string, record: any) => {
@@ -75,19 +74,19 @@ export const MedicationListPage = () => {
       key: 'patient',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.hospitalization?.patient?.nomeCompleto || 'Paciente nÃ£o informado'}</Text>
+          <Text strong>{rec.prescriptionItem?.prescription?.medicalRecord?.patient?.nomeCompleto || 'Paciente não informado'}</Text>
           <Text type="secondary" style={{ fontSize: "12px" }}>
-            {rec.hospitalization?.ward?.nome || 'Ala nÃ£o informada'} - Leito {rec.hospitalization?.bed?.numero || 'N/A'}
+            {rec.prescriptionItem?.prescription?.hospitalization?.ward?.nome || 'Ala não informada'} - Leito {rec.prescriptionItem?.prescription?.hospitalization?.bed?.numero || 'N/A'}
           </Text>
         </Space>
       )
     },
     {
-      title: 'PrescriÃ§Ã£o',
+      title: 'Prescrição',
       key: 'prescription',
       render: (rec: any) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{rec.prescriptionItem?.medication?.nome || 'MedicaÃ§Ã£o nÃ£o especificada'}</Text>
+          <Text strong>{rec.prescriptionItem?.medication?.nome || 'Medicação não especificada'}</Text>
           <Text type="secondary" style={{ fontSize: "12px" }}>
             {rec.prescriptionItem?.dosagem || '-'} - {rec.prescriptionItem?.viaAdministracao || '-'}
           </Text>
@@ -108,15 +107,14 @@ export const MedicationListPage = () => {
       }
     },
     {
-      title: 'AÃ§Ãµes',
+      title: 'Ações',
       key: 'actions',
       render: (rec: any) => (
         <Space>
-          {rec.status === 'NAO_MINISTRADO' && (
-            // BotÃ£o liberado do componente Can
+          {(rec.status === 'NAO_MINISTRADO' || rec.status === 'ATRASADO') && (
             <Button 
               type="primary" 
-              style={{ fontSize: "12px" }} 
+              style={{ fontSize: "12px", background: '#0F766E' }} 
               icon={<CheckSquareOutlined />} 
               onClick={() => setAdministerModal({ visible: true, data: rec })}
             >
@@ -131,15 +129,15 @@ export const MedicationListPage = () => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
-        <Title level={2}>AdministraÃ§Ã£o de Medicamentos (Enfermagem)</Title>
+        <Title level={2} style={{ margin: 0, color: '#1E293B' }}>Administração de Medicamentos (Enfermagem)</Title>
         <Space>
           <Button icon={<ReloadOutlined />} onClick={() => fetchAdministrations(pagination.current, pagination.pageSize, statusFilter, selectedDate)}>
-            Atualizar
+            Atualizar Tabela
           </Button>
         </Space>
       </div>
 
-      <Card style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: 16, border: '1px solid #E2E8F0', borderRadius: '6px' }}>
         <Space style={{ fontSize: "16px" }} wrap>
           <div>
             <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>Data</Text>
@@ -167,7 +165,7 @@ export const MedicationListPage = () => {
         </Space>
       </Card>
 
-      <Card bodyStyle={{ padding: 0 }}>
+      <Card bodyStyle={{ padding: 0 }} style={{ border: '1px solid #E2E8F0', borderRadius: '6px', overflow: 'hidden' }}>
         <Table 
           loading={loading}
           dataSource={data}

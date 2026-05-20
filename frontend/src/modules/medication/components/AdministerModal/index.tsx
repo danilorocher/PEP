@@ -50,14 +50,15 @@ export const AdministerModal = ({ visible, administration, onCancel, onSuccess }
 
     setLoading(true);
     try {
-      await api.patch(`/medication-administrations/${administration.id}`, {
+      // 🔥 Correção Arquitetural: A Rota correta para dar a baixa na Farmácia e faturar
+      await api.patch(`/medication-administrations/${administration.id}/administer`, {
         status: data.status,
         observacoes: data.observacoes,
       });
-      message.success('Registro de administração atualizado');
+      message.success('Registro de administração atualizado com sucesso e estoque deduzido!');
       onSuccess();
     } catch (error: any) {
-      message.error(error.response?.data?.message || 'Erro ao registrar administração');
+      message.error(error.response?.data?.message || 'Erro ao registrar administração no servidor.');
     } finally {
       setLoading(false);
     }
@@ -75,20 +76,22 @@ export const AdministerModal = ({ visible, administration, onCancel, onSuccess }
       onCancel={onCancel}
       onOk={handleSubmit(onSubmit)}
       confirmLoading={loading}
-      okText="Salvar Registro"
+      okText="Salvar e Atualizar Estoque"
+      cancelText="Cancelar"
       destroyOnClose
+      okButtonProps={{ style: { background: '#0F766E' } }}
     >
       <Descriptions size="small" column={1} bordered style={{ marginBottom: 24 }}>
         <Descriptions.Item label="Paciente">
-          <Text strong>{administration.hospitalization?.patient?.nomeCompleto}</Text>
+          <Text strong>{administration.prescriptionItem?.prescription?.medicalRecord?.patient?.nomeCompleto || 'N/A'}</Text>
         </Descriptions.Item>
         <Descriptions.Item label="Localização">
-          {administration.hospitalization?.ward?.nome} - Leito {administration.hospitalization?.bed?.numero}
+          {administration.prescriptionItem?.prescription?.hospitalization?.ward?.nome || 'N/A'} - Leito {administration.prescriptionItem?.prescription?.hospitalization?.bed?.numero || 'N/A'}
         </Descriptions.Item>
         <Descriptions.Item label="Medicamento">
           <Text strong>{item?.medication?.nome}</Text>
         </Descriptions.Item>
-        <Descriptions.Item label="Prescrição">
+        <Descriptions.Item label="Prescrição (Dose)">
           {item?.dosagem} - {item?.viaAdministracao}
         </Descriptions.Item>
         <Descriptions.Item label="Horário Programado">
@@ -100,10 +103,10 @@ export const AdministerModal = ({ visible, administration, onCancel, onSuccess }
       </Descriptions>
 
       <Form layout="vertical">
-        <Form.Item label="Ação" required validateStatus={errors.status ? 'error' : ''} help={errors.status?.message}>
+        <Form.Item label="Ação do Enfermeiro" required validateStatus={errors.status ? 'error' : ''} help={errors.status?.message}>
           <Controller name="status" control={control} render={({ field }) => (
             <Select {...field}>
-              <Select.Option value="MINISTRADO">Ministrado</Select.Option>
+              <Select.Option value="MINISTRADO">Medicamento Ministrado ao Paciente</Select.Option>
               <Select.Option value="NAO_MINISTRADO">Não Ministrado (Outros Motivos)</Select.Option>
               <Select.Option value="RECUSADO_PACIENTE">Recusado pelo Paciente</Select.Option>
             </Select>
@@ -111,13 +114,13 @@ export const AdministerModal = ({ visible, administration, onCancel, onSuccess }
         </Form.Item>
 
         <Form.Item 
-          label="Observações" 
+          label="Observações / Justificativa" 
           required={selectedStatus !== 'MINISTRADO'} 
           validateStatus={errors.observacoes ? 'error' : ''} 
           help={errors.observacoes?.message || (selectedStatus !== 'MINISTRADO' ? 'Obrigatório informar o motivo' : '')}
         >
           <Controller name="observacoes" control={control} render={({ field }) => (
-            <Input.TextArea {...field} rows={3} placeholder="Descreva intercorrências ou o motivo da não administração" />
+            <Input.TextArea {...field} rows={3} placeholder="Descreva intercorrências ou o motivo da não administração..." />
           )} />
         </Form.Item>
       </Form>

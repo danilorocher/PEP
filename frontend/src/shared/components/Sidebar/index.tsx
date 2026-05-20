@@ -15,7 +15,8 @@ import {
   HeartOutlined,
   ExperimentOutlined,
   ScissorOutlined,
-  BankOutlined
+  BankOutlined,
+  SafetyCertificateOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -142,7 +143,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
             { key: '/specialties', label: 'Especialidade Médica' },
             { key: '/admin', label: 'Estrutura Hospitalar' },
             { key: '/cid', label: 'CID' }, 
-            { key: '/exam-catalog', label: 'Exames' }, 
+            { key: '/exam-catalog', label: 'Exames' },
+            // 🔥 NOVO: Rota e Item de Menu de Convênios
+            { key: '/insurances', label: 'Convênios/Planos' }, 
           ]
         },
         { key: '/companies', label: 'Minhas Unidades' },

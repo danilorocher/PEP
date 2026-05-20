@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Select, Button, Card, Row, Col, Space, Typography, message, DatePicker } from 'antd';
+import { Form, Input, Select, Button, Card, Row, Col, Space, Typography, message, DatePicker, Spin } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined, UserOutlined, EnvironmentOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-// 🔥 AQUI ESTAVA O ERRO! Faltava importar a nossa 'api' para enviar os dados
 import { api } from '../../../../shared/services/api';
 
 const { Text, Title } = Typography;
@@ -13,29 +12,72 @@ export const PatientFormPage: React.FC = () => {
   const { id } = useParams();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
+  
+  // Lista de convênios vindos da tabela real do banco
+  const [insurances, setInsurances] = useState<any[]>([]);
 
+  // 1. Carrega os convênios disponíveis no sistema
   useEffect(() => {
-    if (id) {
-      // Cenário de Edição
-      form.setFieldsValue({
-        nome: 'Danilo Tavares',
-        cpf: '123.456.789-00',
-        dataNascimento: dayjs('1990-05-18'),
-        genero: 'MASCULINO',
-        telefone: '(11) 99999-9999',
-        email: 'danilo@email.com',
-        cep: '01001-000',
-        logradouro: 'Avenida Paulista',
-        numero: '1000',
-        bairro: 'Bela Vista',
-        cidade: 'São Paulo',
-        estado: 'SP',
-        convenio: 'AMIL_MEDICIAL',
-        numeroCarteirinha: '9876543210002',
-      });
-    }
+    const loadInsurances = async () => {
+      try {
+        const response = await api.get('/insurances');
+        setInsurances(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar convênios:', error);
+        message.error('Não foi possível carregar a lista de convênios atualizada.');
+      }
+    };
+    loadInsurances();
+  }, []);
+
+  // 2. 🔥 BUSCA REAL NO BANCO DE DADOS: Se houver ID na URL, busca o paciente legítimo da API
+  useEffect(() => {
+    const loadPatientData = async () => {
+      if (!id) return;
+      
+      setPageLoading(true);
+      try {
+        const response = await api.get(`/patients/${id}`);
+        const patient = response.data;
+
+        // Desestrutura o objeto de endereço salvo no formato JSON do Postgres
+        const endereco = patient.enderecoCompleto || {};
+
+        // Alimenta o formulário dinamicamente com os dados reais gravados no banco
+        form.setFieldsValue({
+          nome: patient.nomeCompleto,
+          cpf: patient.cpf,
+          dataNascimento: patient.dataNascimento ? dayjs(patient.dataNascimento) : undefined,
+          genero: patient.sexo === 'OUTRO' ? 'NÃO_INFORMADO' : patient.sexo,
+          telefone: patient.telefone,
+          email: patient.email,
+          
+          // Dados de Endereço Dinâmicos
+          cep: endereco.cep,
+          logradouro: endereco.logradouro,
+          numero: endereco.numero,
+          bairro: endereco.bairro,
+          cidade: endereco.cidade,
+          estado: endereco.uf,
+          
+          // Dados do Convênio Dinâmicos
+          convenioId: patient.convenioId || undefined,
+          numeroCarteirinha: patient.numeroCarteirinha,
+          validadeCarteirinha: patient.dataValidadeCarteirinha ? dayjs(patient.dataValidadeCarteirinha) : undefined,
+        });
+      } catch (error) {
+        console.error('Erro ao buscar paciente do banco:', error);
+        message.error('Erro ao carregar os dados reais do paciente do servidor.');
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    loadPatientData();
   }, [id, form]);
 
+  // 3. ENVIO / SALVAMENTO REAL NO BANCO
   const onFinish = async (values: any) => {
     setLoading(true);
     try {
@@ -47,40 +89,41 @@ export const PatientFormPage: React.FC = () => {
       };
 
       if (values.telefone) payload.telefone = values.telefone;
+      if (values.email) payload.email = values.email;
       if (values.numeroCarteirinha) payload.numeroCarteirinha = values.numeroCarteirinha;
       if (values.validadeCarteirinha) payload.dataValidadeCarteirinha = values.validadeCarteirinha.toISOString();
 
-      if (values.logradouro && values.numero && values.bairro && values.cidade && values.estado && values.cep) {
+      // Estrutura o JSON de endereço conforme especificado no schema.prisma
+      if (values.logradouro || values.numero || values.bairro || values.cidade || values.estado || values.cep) {
         payload.enderecoCompleto = {
-          logradouro: values.logradouro,
-          numero: values.numero,
-          bairro: values.bairro,
-          cidade: values.cidade,
-          uf: values.estado.toUpperCase(),
-          cep: values.cep
+          logradouro: values.logradouro || '',
+          numero: values.numero || '',
+          bairro: values.bairro || '',
+          cidade: values.cidade || '',
+          uf: values.estado ? values.estado.toUpperCase() : '',
+          cep: values.cep || ''
         };
       }
       
-      console.log('📦 PAYLOAD DEFENSIVO ENVIADO:', payload);
+      // Vincula o UUID do convênio criado na base
+      payload.convenioId = values.convenioId || null;
 
       if (id) {
         await api.patch(`/patients/${id}`, payload);
-        message.success('Prontuário do paciente atualizado com sucesso!');
+        message.success('Prontuário atualizado com sucesso no banco de dados!');
       } else {
         await api.post('/patients', payload);
-        message.success('Paciente admitido e cadastrado com sucesso!');
+        message.success('Paciente admitido e salvo com sucesso no banco de dados!');
       }
       
       navigate('/patients');
     } catch (error: any) {
-      console.error('🚨 ERRO COMPLETO DA API:', error);
-      console.error('🚨 RESPOSTA DO SERVIDOR:', error.response?.data);
-      
+      console.error('Erro ao salvar no banco:', error);
       const errorMessage = error.response?.data?.message;
       message.error(
         Array.isArray(errorMessage) 
           ? errorMessage.join(' | ') 
-          : errorMessage || 'Erro ao salvar no banco de dados. Verifique os dados.'
+          : errorMessage || 'Erro ao processar gravação no banco de dados.'
       );
     } finally {
       setLoading(false);
@@ -88,14 +131,34 @@ export const PatientFormPage: React.FC = () => {
   };
 
   const renderSectionTitle = (title: string, icon: React.ReactNode) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderLeft: '4px solid #0F766E', paddingLeft: '12px', marginBottom: '20px', marginTop: '8px' }}>
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '10px', 
+      borderLeft: '4px solid #0F766E', 
+      paddingLeft: '12px',
+      marginBottom: '20px',
+      marginTop: '8px'
+    }}>
       <span style={{ color: '#0F766E', display: 'flex', alignItems: 'center' }}>{icon}</span>
-      <Text strong style={{ color: '#1E293B', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</Text>
+      <Text strong style={{ color: '#1E293B', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {title}
+      </Text>
     </div>
   );
 
+  if (pageLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column', gap: '16px' }}>
+        <Spin size="large" />
+        <Text type="secondary">Consultando prontuário eletrônico no PostgreSQL...</Text>
+      </div>
+    );
+  }
+
   return (
     <Form form={form} layout="vertical" onFinish={onFinish} requiredMark={false}>
+      {/* BARRA SUPERIOR DE OPERAÇÃO */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <Title level={3} style={{ margin: 0, color: '#1E293B', fontWeight: 700 }}>
@@ -115,13 +178,16 @@ export const PatientFormPage: React.FC = () => {
         </Space>
       </div>
 
+      {/* ÁREA CENTRAL DO WORKSPACE */}
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Card bordered={false} style={{ border: '1px solid #E2E8F0', borderRadius: '6px', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.02)' }}>
+        
+        {/* SEÇÃO 1: IDENTIFICAÇÃO DO PACIENTE */}
+        <Card bordered={false} style={{ border: '1px solid #E2E8F0', borderRadius: '6px' }}>
           {renderSectionTitle('Dados Identificadores', <UserOutlined style={{ fontSize: '16px' }} />)}
           <Row gutter={[16, 0]}>
             <Col xs={24} md={12}>
               <Form.Item name="nome" label="Nome Completo do Paciente" rules={[{ required: true, message: 'Campo obrigatório' }]}>
-                <Input placeholder="Iniciais em maiúsculo..." />
+                <Input placeholder="Digite o nome completo..." />
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
@@ -156,7 +222,8 @@ export const PatientFormPage: React.FC = () => {
           </Row>
         </Card>
 
-        <Card bordered={false} style={{ border: '1px solid #E2E8F0', borderRadius: '6px', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.02)' }}>
+        {/* SEÇÃO 2: LOCALIZAÇÃO E ENDEREÇO */}
+        <Card bordered={false} style={{ border: '1px solid #E2E8F0', borderRadius: '6px' }}>
           {renderSectionTitle('Endereço Residencial', <EnvironmentOutlined style={{ fontSize: '16px' }} />)}
           <Row gutter={[16, 0]}>
             <Col xs={24} md={4}>
@@ -192,32 +259,34 @@ export const PatientFormPage: React.FC = () => {
           </Row>
         </Card>
 
-        <Card bordered={false} style={{ border: '1px solid #E2E8F0', borderRadius: '6px', boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.02)' }}>
+        {/* SEÇÃO 3: COBERTURA SAÚDE / CONVÊNIO */}
+        <Card bordered={false} style={{ border: '1px solid #E2E8F0', borderRadius: '6px' }}>
           {renderSectionTitle('Plano de Saúde / Cobertura', <SafetyCertificateOutlined style={{ fontSize: '16px' }} />)}
           <Row gutter={[16, 0]}>
             <Col xs={24} md={8}>
-              <Form.Item name="convenio" label="Convênio Ativo" rules={[{ required: true, message: 'Campo obrigatório' }]}>
-                <Select placeholder="Selecione o plano..." options={[
-                  { value: 'PARTICULAR', label: 'Atendimento Particular (Sem Convênio)' },
-                  { value: 'SUS', label: 'Sistema Único de Saúde (SUS)' },
-                  { value: 'AMIL_MEDICIAL', label: 'Amil Assistência Médica' },
-                  { value: 'UNIMED_BR', label: 'Central Nacional Unimed' },
-                  { value: 'SULAMERICA_SAUDE', label: 'SulAmérica Saúde' },
-                ]} />
+              <Form.Item name="convenioId" label="Convênio Ativo" rules={[{ required: true, message: 'Campo obrigatório' }]}>
+                <Select placeholder="Selecione o plano..." allowClear>
+                  {insurances.map((ins: any) => (
+                    <Select.Option key={ins.id} value={ins.id}>
+                      {ins.nome} ({ins.tipo.replace('_', ' ')})
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={24} md={10}>
-              <Form.Item name="numeroCarteirinha" label="Número da Carteirinha / Código do Beneficiário">
-                <Input className="tabular-nums" placeholder="Digite apenas os números..." />
+              <Form.Item name="numeroCarteirinha" label="Número da Carteirinha">
+                <Input placeholder="Digite o número do cartão..." />
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item name="validadeCarteirinha" label="Validade da Guia/Carteirinha">
+              <Form.Item name="validadeCarteirinha" label="Validade da Carteirinha">
                 <DatePicker style={{ width: '100%' }} format="MM/YYYY" picker="month" placeholder="Selecione..." />
               </Form.Item>
             </Col>
           </Row>
         </Card>
+
       </Space>
     </Form>
   );

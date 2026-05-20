@@ -3,7 +3,7 @@ import { IPrescriptionRepository, PRESCRIPTION_REPOSITORY_TOKEN } from '../../..
 import { IMedicalRecordRepository, MEDICAL_RECORD_REPOSITORY_TOKEN } from '../../../domain/repositories/medical-record.repository.interface';
 import { PrismaService } from '../../../infrastructure/database/prisma/repositories/prisma.service';
 import { AdministerMedicationDto } from '../../../../modules/medications/dto/medication-administration.dto';
-import { AccountConsumptionService } from '../hospital-billing/account-consumption.service'; // 🔥 Nova Importação
+import { AccountConsumptionService } from '../hospital-billing/account-consumption.service';
 
 @Injectable()
 export class MedicationAdministrationsUseCases {
@@ -11,7 +11,7 @@ export class MedicationAdministrationsUseCases {
     @Inject(PRESCRIPTION_REPOSITORY_TOKEN) private readonly prescriptionRepo: IPrescriptionRepository,
     @Inject(MEDICAL_RECORD_REPOSITORY_TOKEN) private readonly medicalRecordRepo: IMedicalRecordRepository,
     private readonly prisma: PrismaService,
-    private readonly consumptionService: AccountConsumptionService // 🔥 Injetado
+    private readonly consumptionService: AccountConsumptionService
   ) {}
 
   async getPendingAdministrations(tenantId: string, page: number, limit: number, userId: string, ip: string, userAgent: string) {
@@ -54,7 +54,7 @@ export class MedicationAdministrationsUseCases {
         prescriptionItem: {
           include: { 
             prescription: { select: { medicalRecordId: true, hospitalizationId: true } },
-            medication: { select: { nome: true } } // 🔥 Precisamos do nome para o faturamento
+            medication: { select: { id: true, nome: true, controleEspecial: true } } 
           }
         }
       }
@@ -66,9 +66,12 @@ export class MedicationAdministrationsUseCases {
     }
 
     const record = await this.medicalRecordRepo.findById(admin.prescriptionItem.prescription.medicalRecordId, tenantId);
+    const medicationId = admin.prescriptionItem.medication.id;
 
-    // 🔥 Protegido por uma Transação ACID (Ou salva tudo, ou reverte tudo)
+    // 🔥 TRANSAÇÃO ACID: ENFERMAGEM + FARMÁCIA + FATURAMENTO
     await this.prisma.$transaction(async (tx) => {
+      
+      // 1. Atualiza a Checagem da Enfermagem
       await tx.medicationAdministration.update({
         where: { id: administrationId },
         data: {
@@ -79,12 +82,59 @@ export class MedicationAdministrationsUseCases {
         }
       });
 
-      // 🔥 INTEGRAÇÃO FINANCEIRA AUTOMÁTICA
       if (data.status === 'MINISTRADO') {
-        // Num sistema real, o preço viria do catálogo de preços da clínica/fornecedor (Brasíndice/Simpro).
-        // Vamos usar um valor médio simulado para alimentar a conta automaticamente.
-        const valorUnitarioSimulado = 45.90; 
+        
+        // 2. 🔥 LÓGICA DE FARMÁCIA: Baixa de Estoque Automática (FEFO)
+        const availableStock = await tx.medicationStock.findFirst({
+          where: {
+            medicationId: medicationId,
+            tenantId: tenantId,
+            quantidade: { gte: 1 }, 
+            deletedAt: null,
+            validade: { gte: new Date() } // Impede baixa de lote vencido
+          },
+          orderBy: { validade: 'asc' }
+        });
 
+        if (availableStock) {
+          // Desconta 1 unidade do estoque
+          await tx.medicationStock.update({
+            where: { id: availableStock.id },
+            data: { quantidade: { decrement: 1 } }
+          });
+
+          // Registra na tabela oficial do sistema para Log de Movimentos de Enfermagem/Farmácia
+          await tx.medicationKardex.create({
+            data: {
+              tenantId: tenantId,
+              patientId: record!.patientId,
+              medicalRecordId: record!.id,
+              medicationId: medicationId,
+              responsavelId: userId,
+              acao: 'ADMINISTRADO',
+              detalhes: `Administrado via Prontuário. Baixa de 1 un. no Lote ${availableStock.lote}.`
+            }
+          });
+
+          // Se for controlado/psicotrópico, regista no livro da ANVISA também
+          if (admin.prescriptionItem.medication.controleEspecial) {
+             await tx.controlledMedicationLog.create({
+               data: {
+                 tenantId,
+                 medicationId,
+                 stockId: availableStock.id,
+                 pacienteId: record!.patientId,
+                 responsavelId: userId,
+                 tipoOperacao: 'SAIDA',
+                 quantidade: 1,
+                 justificativa: `Administração à beira-leito (Prescrição Item: ${admin.prescriptionItemId})`
+               }
+             });
+          }
+        }
+
+        // 3. 🔥 LÓGICA DE FATURAMENTO: Lança o item na Conta TISS do Paciente
+        const valorUnitarioSimulado = 45.90; 
         await this.consumptionService.recordConsumption(tenantId, {
           patientId: record!.patientId,
           hospitalizationId: admin.prescriptionItem.prescription.hospitalizationId ?? undefined,

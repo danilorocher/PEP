@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Modal, Form, Select, Input, Button, message, Row, Col, Switch } from 'antd';
+import { useEffect, useState, useRef } from 'react';
+import { Modal, Form, Select, Input, Button, message, Row, Col, Switch, Spin } from 'antd';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -28,6 +28,10 @@ export const ExamRequestModal = ({ visible, patientId, recordId, hospitalization
   const [loading, setLoading] = useState(false);
   const [exams, setExams] = useState<any[]>([]);
   const [cids, setCids] = useState<any[]>([]);
+  const [fetchingCids, setFetchingCids] = useState(false);
+  
+  // Ref para controlar o debounce da pesquisa do CID-10
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const { control, handleSubmit, reset, watch, formState: { errors } } = useForm<ExamRequestFormData>({
     resolver: zodResolver(schema),
@@ -39,26 +43,51 @@ export const ExamRequestModal = ({ visible, patientId, recordId, hospitalization
   useEffect(() => {
     if (visible) {
       reset();
-      fetchAuxiliaryData();
+      fetchExamsCatalog();
+      fetchCids(''); // Traz as primeiras doenças recomendadas ao abrir
     }
   }, [visible, reset]);
 
-  const fetchAuxiliaryData = async () => {
+  const fetchExamsCatalog = async () => {
     try {
-      const [examsRes, cidsRes] = await Promise.all([
-        api.get('/exams/catalog', { params: { limit: 500, status: 'ATIVO' } }),
-        api.get('/admin/cid10').catch(() => ({ data: [] }))
-      ]);
+      const examsRes = await api.get('/exams/catalog', { params: { limit: 500, status: 'ATIVO' } });
       setExams(examsRes.data?.data || examsRes.data || []);
-      setCids(cidsRes.data || [{ id: 'CID-MOCK', codigo: 'Z00.0', descricao: 'Exame médico geral' }]);
     } catch (error) {
       message.error('Erro ao carregar catálogo de exames.');
     }
   };
 
+  // 🔥 Motor de Busca Otimizado ligado à nossa rota legítima do DATASUS
+  const fetchCids = async (search: string) => {
+    setFetchingCids(true);
+    try {
+      const response = await api.get('/cid', {
+        params: { search, page: 1, limit: 50 }
+      });
+      setCids(response.data?.data || response.data || []);
+    } catch (error) {
+      console.error("Erro ao buscar CIDs para solicitação de exames:", error);
+    } finally {
+      setFetchingCids(false);
+    }
+  };
+
+  // 🔥 Efeito Debounce para proteger o servidor contra requisições excessivas
+  const handleSearchCid = (value: string) => {
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+    searchTimeout.current = setTimeout(() => {
+      fetchCids(value);
+    }, 500);
+  };
+
   const onSubmit = async (data: ExamRequestFormData) => {
     setLoading(true);
     try {
+      // Blindagem defensiva de chaves estrangeiras nulas para o Postgres
+      const safeCid = (data.cid10Id && data.cid10Id.trim() !== '') ? data.cid10Id : null;
+
       const payload = {
         medicalRecordId: recordId,
         patientId,
@@ -66,7 +95,7 @@ export const ExamRequestModal = ({ visible, patientId, recordId, hospitalization
         examId: data.examId,
         urgencia: data.urgencia,
         isConvenio: data.isConvenio,
-        cid10Id: data.cid10Id,
+        cid10Id: safeCid,
         observacoes: data.observacoes,
       };
 
@@ -87,11 +116,13 @@ export const ExamRequestModal = ({ visible, patientId, recordId, hospitalization
       onCancel={onCancel}
       onOk={handleSubmit(onSubmit)}
       confirmLoading={loading}
-      okText="Solicitar"
+      okText="Solicitar Exame"
+      cancelText="Cancelar"
       destroyOnClose
       width={700}
+      okButtonProps={{ style: { background: '#0F766E', borderColor: '#0F766E' } }}
     >
-      <Form layout="vertical">
+      <Form layout="vertical" style={{ marginTop: '16px' }}>
         <Row gutter={16}>
           <Col span={16}>
             <Form.Item label="Exame" required validateStatus={errors.examId ? 'error' : ''} help={errors.examId?.message}>
@@ -117,17 +148,30 @@ export const ExamRequestModal = ({ visible, patientId, recordId, hospitalization
 
         <Row gutter={16} align="middle">
           <Col span={6}>
-            <Form.Item label="Via Convênio?">
+            <Form.Item label="Via Convênio?" style={{ marginBottom: '24px' }}>
               <Controller name="isConvenio" control={control} render={({ field: { value, onChange } }) => (
                 <Switch checked={value} onChange={onChange} checkedChildren="Sim" unCheckedChildren="Não" />
               )} />
             </Form.Item>
           </Col>
           <Col span={18}>
+            {/* 🔥 CAMPO ATUALIZADO COM CAPACIDADE PARA 14.229 REGISTROS */}
             <Form.Item label="CID-10 Justificativo" required={isConvenio} validateStatus={errors.cid10Id ? 'error' : ''} help={errors.cid10Id?.message}>
               <Controller name="cid10Id" control={control} render={({ field }) => (
-                <Select {...field} showSearch optionFilterProp="children" placeholder="Obrigatório para convênios" allowClear>
-                  {cids.map((c: any) => <Select.Option key={c.id} value={c.id}>{c.codigo} - {c.descricao}</Select.Option>)}
+                <Select 
+                  {...field} 
+                  showSearch 
+                  filterOption={false}
+                  onSearch={handleSearchCid}
+                  notFoundContent={fetchingCids ? <Spin size="small" /> : null}
+                  placeholder="Digite o código (ex: A00) ou a doença (ex: Cólera)..." 
+                  allowClear
+                >
+                  {cids.map((c: any) => (
+                    <Select.Option key={c.id} value={c.id}>
+                      <strong style={{ color: '#0F766E' }}>{c.codigo}</strong> - {c.descricao}
+                    </Select.Option>
+                  ))}
                 </Select>
               )} />
             </Form.Item>

@@ -16,7 +16,7 @@ export class PharmacyDispensationUseCases {
 
     if (!prescription) throw new NotFoundException('Prescrição não encontrada ou inativa.');
 
-    // 2. Transação ACID: Ou dispensa tudo e baixa o estoque, ou falha tudo
+    // 2. Transação ACID Logística
     return await this.prisma.$transaction(async (tx) => {
       
       const dispensation = await tx.medicationDispensation.create({
@@ -24,27 +24,25 @@ export class PharmacyDispensationUseCases {
           tenantId,
           prescriptionId: data.prescriptionId,
           farmaceuticoId: userId,
-          status: 'DISPENSADA',
+          status: 'DISPENSADA', // Agora significa "Separado e Entregue à Enfermagem"
           dataHoraDispensa: new Date(),
           observacoes: data.observacoes,
         }
       });
 
       for (const item of data.items) {
-        // Verifica o estoque
+        // Apenas verifica se o lote existe e é válido
         const stock = await tx.medicationStock.findFirst({
           where: { id: item.stockId, tenantId, deletedAt: null }
         });
 
-        if (!stock || stock.quantidade < item.quantidadeDispensada) {
-          throw new BadRequestException(`Estoque insuficiente no lote selecionado.`);
+        if (!stock) {
+          throw new BadRequestException(`Lote selecionado não encontrado no sistema.`);
         }
 
-        // Baixa no estoque
-        await tx.medicationStock.update({
-          where: { id: item.stockId },
-          data: { quantidade: stock.quantidade - item.quantidadeDispensada }
-        });
+        // 🔥 CORREÇÃO ARQUITETURAL: BAIXA DE ESTOQUE REMOVIDA DAQUI!
+        // A quantidade física permanece no sistema até o enfermeiro confirmar a administração beira-leito.
+        // O sistema apenas registra logisticamente que este lote foi separado pela farmácia.
 
         // Relaciona a dispensação ao item prescrito e ao lote
         await tx.dispensationItem.create({
@@ -56,7 +54,7 @@ export class PharmacyDispensationUseCases {
           }
         });
 
-        // Registra no Kardex Hospitalar (Rastreabilidade)
+        // Registra no Kardex Hospitalar (Rastreabilidade Logística)
         await tx.medicationKardex.create({
           data: {
             tenantId,
@@ -64,8 +62,8 @@ export class PharmacyDispensationUseCases {
             medicalRecordId: prescription.medicalRecordId,
             medicationId: stock.medicationId,
             responsavelId: userId,
-            acao: KardexAction.DISPENSADO,
-            detalhes: `Dispensação Validada: ${item.quantidadeDispensada} unid. | Lote: ${stock.lote} | Local: ${stock.localizacao}`,
+            acao: KardexAction.DISPENSADO, // Ação Logística
+            detalhes: `Logística (Separação): ${item.quantidadeDispensada} unid. preparadas | Lote: ${stock.lote}. A baixa física ocorrerá no momento da administração beira-leito.`,
           }
         });
       }

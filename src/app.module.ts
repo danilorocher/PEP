@@ -39,12 +39,14 @@ import { HospitalBillingModule } from './modules/hospital-billing/hospital-billi
 import { OccupationsModule } from './modules/occupations/occupations.module';
 import { SpecialtiesModule } from './modules/specialties/specialties.module';
 
-// 🔥 NOVO: IMPORTAÇÃO DO MÓDULO FINANCEIRO (FASE 1)
+// MÓDULOS NOVOS
 import { FinancialModule } from './modules/financial/financial.module';
+import { CidModule } from './modules/cid/cid.module';
+// 🔥 NOVO: IMPORTAÇÃO DO MÓDULO DE CONVÊNIOS
+import { InsurancesModule } from './modules/insurances/insurances.module';
 
 import { CacheModule } from './shared/infrastructure/cache/cache.module';
 import { ScheduleModule } from '@nestjs/schedule';
-
 
 @Module({
   imports: [
@@ -111,9 +113,11 @@ import { ScheduleModule } from '@nestjs/schedule';
     HospitalBillingModule,
     OccupationsModule,
     SpecialtiesModule,
-    
-    // 🔥 REGISTRO DO MÓDULO FINANCEIRO
     FinancialModule,
+    CidModule,
+    
+    // 🔥 REGISTRO DO MÓDULO DE CONVÊNIOS
+    InsurancesModule,
   ],
   providers: [
     {

@@ -9,11 +9,8 @@ import { PatientFormPage } from '../modules/patients/pages/PatientForm';
 import { ProfessionalListPage } from '../modules/professionals/pages/ProfessionalList';
 import { ProfessionalFormPage } from '../modules/professionals/pages/ProfessionalForm';
 import { StructureListPage } from '../modules/structure/pages/StructureList';
-
-// 🔥 IMPORTAÇÕES DO SISTEMA PARAMETRIZÁVEL
 import { SpecialtiesListPage } from '../modules/structure/pages/SpecialtiesList';
 import { OccupationsListPage } from '../modules/structure/pages/OccupationsList';
-
 import { SchedulingPage as AppointmentsCalendarPage } from '../modules/scheduling/pages/Scheduling';
 import { HospitalizationListPage } from '../modules/hospitalizations/pages/HospitalizationList';
 import { MedicalRecordViewPage } from '../modules/medical-records/pages/MedicalRecordView';
@@ -32,10 +29,13 @@ import { ExamCatalogPage } from '../modules/exams/pages/ExamCatalog';
 import { DoctorWorklistPage } from '../modules/attendance/pages/DoctorWorklist';
 import { NurseWorklistPage } from '../modules/attendance/pages/NurseWorklist';
 
-//IMPORTAÇÕES DO MÓDULO FINANCEIRO
 import { CostCentersList } from '../modules/financial/pages/CostCentersList';
 import { ChartOfAccountsTree } from '../modules/financial/pages/ChartOfAccountsTree';
 import { FinancialTransactionsList } from '../modules/financial/pages/FinancialTransactionsList';
+import { CidList } from '../modules/cid/pages/CidList';
+
+// 🔥 NOVO: IMPORTAÇÃO DO MÓDULO DE CONVÊNIOS
+import { InsuranceList } from '../modules/insurances/pages/InsuranceList';
 
 const AppRoutes = () => {
   return (
@@ -47,19 +47,19 @@ const AppRoutes = () => {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<MainLayout><DashboardPage /></MainLayout>} />
         
-        {/* PACIENTES */}
         <Route path="/patients" element={<MainLayout><PatientListPage /></MainLayout>} />
         <Route path="/patients/new" element={<MainLayout><PatientFormPage /></MainLayout>} />
         <Route path="/patients/edit/:id" element={<MainLayout><PatientFormPage /></MainLayout>} />
         
-        {/* PROFISSIONAIS E GESTÃO */}
         <Route path="/professionals" element={<MainLayout><ProfessionalListPage /></MainLayout>} />
         <Route path="/professionals/new" element={<MainLayout><ProfessionalFormPage /></MainLayout>} />
         <Route path="/professionals/edit/:id" element={<MainLayout><ProfessionalFormPage /></MainLayout>} />
         
-        {/*NOVAS ROTAS DE CONFIGURAÇÃO DO SISTEMA */}
         <Route path="/occupations" element={<MainLayout><OccupationsListPage /></MainLayout>} />
         <Route path="/specialties" element={<MainLayout><SpecialtiesListPage /></MainLayout>} />
+        
+        {/* 🔥 NOVA ROTA DE CONVÊNIOS */}
+        <Route path="/insurances" element={<MainLayout><InsuranceList /></MainLayout>} />
         
         <Route path="/companies" element={<MainLayout><CompanyFormPage /></MainLayout>} />
         <Route path="/admin" element={<MainLayout><StructureListPage /></MainLayout>} />
@@ -81,14 +81,14 @@ const AppRoutes = () => {
         <Route path="/surgical-center" element={<MainLayout><SurgicalDashboardPage /></MainLayout>} />
         <Route path="/assistance" element={<MainLayout><ClinicalDashboardPage data={[]} /></MainLayout>} />
         
-        <Route path="/attendance/doctor" element={<DoctorWorklistPage />} />
-        <Route path="/attendance/nurse" element={<NurseWorklistPage />} />
+        <Route path="/attendance/doctor" element={<MainLayout><DoctorWorklistPage /></MainLayout>} />
+        <Route path="/attendance/nurse" element={<MainLayout><NurseWorklistPage /></MainLayout>} />
 
-        {/*ROTAS DO MÓDULO FINANCEIRO (Com MainLayout para manter o menu lateral) */}
         <Route path="/financial/cost-centers" element={<MainLayout><CostCentersList /></MainLayout>} />
         <Route path="/financial/chart" element={<MainLayout><ChartOfAccountsTree /></MainLayout>} />
         <Route path="/financial/transactions" element={<MainLayout><FinancialTransactionsList /></MainLayout>} />
-
+        
+        <Route path="/cid" element={<MainLayout><CidList /></MainLayout>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
